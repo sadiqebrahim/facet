@@ -51,12 +51,21 @@ All processing is local. No image, crop, embedding or prediction leaves the mach
 
 | [`e7_cross_dataset`](experiments/e7_cross_dataset/FINDINGS.md) | **The gate.** Does any of it transfer off-benchmark? | **Conditional pass.** Trained on SCUT, tested on 2,520 held-out in-the-wild MEBeauty faces: ranking transfers (ρ **0.608**, 72 % of within-dataset performance, vs a 0.872 human ceiling). But **cross-group calibration does not** — the top-100 shares only **20/100** members with the one MEBeauty's own raters would pick. Also: training on 2,520 *diverse* images transfers better than 5,500 posed ones. |
 
+| [`e14_personalisation`](experiments/e14_personalisation/FINDINGS.md) | Can we learn an individual's taste, and at what label cost? | **Depends entirely on rater-pool diversity.** Seven SCUT raters rated all 5,500 images twice, giving a real ceiling: people agree with the crowd (ρ 0.766) *more than with their own earlier judgment* (ρ 0.575). The population model already sits at **95.5 % of the achievable maximum**, so on that homogeneous pool personalisation **hurts** at every budget. On diverse MEBeauty it helps — **+0.025 Spearman from 100 labels**, 68 % of users — and 5.4× more for users the consensus fits worst. |
+
 **What E7 changed.** Ranking works well enough to build on, so the project proceeds — but
 with a narrower scope than the brief assumed: absolute thresholds like "attractiveness above
 4.0" are not supportable across domains and are replaced by percentile-within-collection;
 production training moves to in-the-wild data; and personalisation is promoted from a
 Phase 10 extra to a core requirement, because two reasonable rater pools disagreeing on 80 %
 of a result set means no single population ranking can be the honest answer.
+
+**What E14 added.** Personalisation is worth building, but it is a *refinement, not the
+resolution* — a +0.025 gain does not offset 80 % of a top-100 changing between rater pools.
+It must use the residual formulation (`population + user_residual`, since training on a
+user's labels alone is catastrophic cold-start), and it should be gated on how poorly the
+population model already fits that user. The bigger lever remains **whose ratings you train
+on in the first place.**
 
 ## Documentation
 

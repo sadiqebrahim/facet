@@ -1,0 +1,209 @@
+{
+  "experiment": "e14_personalisation",
+  "description": "Is there learnable individual taste beyond the population consensus?",
+  "config": {
+    "scut_root": "/home/dhruv/sadiq/facet/data/raw/SCUT-FBP5500_v2",
+    "me_root": "/home/dhruv/sadiq/facet/data/raw/MEBeauty",
+    "out_dir": "/home/dhruv/sadiq/facet/experiments/e14_personalisation",
+    "seeds": 3
+  },
+  "seed": 1337,
+  "dataset": "SCUT-FBP5500 (60 raters) + MEBeauty (360 raters)",
+  "dataset_version": "",
+  "split_methodology": "Simulated users = individual raters. Population target is the mean of all OTHER raters (leave-one-rater-out), so a rater's own labels never leak into the population model. Image split is SCUT's official cv1; MEBeauty uses its official split.",
+  "metrics": {
+    "ceilings": {
+      "n_raters_with_repeats": 7,
+      "mean_test_retest_spearman": 0.574933371965504,
+      "median_test_retest_spearman": 0.5865363678848828,
+      "attenuation_limit": 0.758243609907465,
+      "per_rater": {
+        "2": {
+          "n": 5500,
+          "test_retest_spearman": 0.6249194499241019
+        },
+        "13": {
+          "n": 5500,
+          "test_retest_spearman": 0.5865363678848828
+        },
+        "32": {
+          "n": 5500,
+          "test_retest_spearman": 0.4770580078391295
+        },
+        "37": {
+          "n": 5500,
+          "test_retest_spearman": 0.4903833541798888
+        },
+        "39": {
+          "n": 5500,
+          "test_retest_spearman": 0.5267403969417414
+        },
+        "52": {
+          "n": 5500,
+          "test_retest_spearman": 0.6235537221116251
+        },
+        "54": {
+          "n": 5500,
+          "test_retest_spearman": 0.695342304877158
+        }
+      }
+    },
+    "scut_aggregate": {
+      "population_spearman": 0.7237500566182942,
+      "curve": {
+        "0": {
+          "n_users": 60,
+          "personal_spearman": NaN,
+          "residual_spearman": 0.7237500566182942,
+          "population_spearman_matched_cohort": 0.7237500566182942,
+          "gain_vs_population": 0.0,
+          "fraction_of_users_helped": 0.0
+        },
+        "10": {
+          "n_users": 60,
+          "personal_spearman": 0.47033650885484124,
+          "residual_spearman": 0.7214632863927253,
+          "population_spearman_matched_cohort": 0.7237500566182942,
+          "gain_vs_population": -0.0022867702255688904,
+          "fraction_of_users_helped": 0.23333333333333334
+        },
+        "25": {
+          "n_users": 60,
+          "personal_spearman": 0.5764364217663529,
+          "residual_spearman": 0.7201095469399308,
+          "population_spearman_matched_cohort": 0.7237500566182942,
+          "gain_vs_population": -0.0036405096783633795,
+          "fraction_of_users_helped": 0.23333333333333334
+        },
+        "50": {
+          "n_users": 60,
+          "personal_spearman": 0.630425186581424,
+          "residual_spearman": 0.7170983121770572,
+          "population_spearman_matched_cohort": 0.7237500566182942,
+          "gain_vs_population": -0.006651744441236951,
+          "fraction_of_users_helped": 0.16666666666666666
+        },
+        "100": {
+          "n_users": 60,
+          "personal_spearman": 0.6559821735669487,
+          "residual_spearman": 0.7132672710304687,
+          "population_spearman_matched_cohort": 0.7237500566182942,
+          "gain_vs_population": -0.01048278558782545,
+          "fraction_of_users_helped": 0.16666666666666666
+        },
+        "250": {
+          "n_users": 60,
+          "personal_spearman": 0.6717146387568573,
+          "residual_spearman": 0.7018161912709285,
+          "population_spearman_matched_cohort": 0.7237500566182942,
+          "gain_vs_population": -0.021933865347365633,
+          "fraction_of_users_helped": 0.06666666666666667
+        },
+        "500": {
+          "n_users": 60,
+          "personal_spearman": 0.6818748843294042,
+          "residual_spearman": 0.6979832274301861,
+          "population_spearman_matched_cohort": 0.7237500566182942,
+          "gain_vs_population": -0.02576682918810802,
+          "fraction_of_users_helped": 0.06666666666666667
+        },
+        "1000": {
+          "n_users": 60,
+          "personal_spearman": 0.6995747459719964,
+          "residual_spearman": 0.7058718359178281,
+          "population_spearman_matched_cohort": 0.7237500566182942,
+          "gain_vs_population": -0.017878220700466074,
+          "fraction_of_users_helped": 0.13333333333333333
+        },
+        "2000": {
+          "n_users": 60,
+          "personal_spearman": 0.7196518901285801,
+          "residual_spearman": 0.7210893976755021,
+          "population_spearman_matched_cohort": 0.7237500566182942,
+          "gain_vs_population": -0.0026606589427921046,
+          "fraction_of_users_helped": 0.2833333333333333
+        }
+      },
+      "labels_to_beat_population": null
+    },
+    "mebeauty_aggregate": {
+      "population_spearman": 0.5053909782435612,
+      "curve": {
+        "0": {
+          "n_users": 128,
+          "personal_spearman": NaN,
+          "residual_spearman": 0.5053909782435612,
+          "population_spearman_matched_cohort": 0.5053909782435612,
+          "gain_vs_population": 0.0,
+          "fraction_of_users_helped": 0.0
+        },
+        "10": {
+          "n_users": 128,
+          "personal_spearman": 0.20655952683448348,
+          "residual_spearman": 0.5091136558472968,
+          "population_spearman_matched_cohort": 0.5053909782435612,
+          "gain_vs_population": 0.00372267760373568,
+          "fraction_of_users_helped": 0.6015625
+        },
+        "25": {
+          "n_users": 128,
+          "personal_spearman": 0.32953509566931294,
+          "residual_spearman": 0.5184595764712132,
+          "population_spearman_matched_cohort": 0.5053909782435612,
+          "gain_vs_population": 0.01306859822765205,
+          "fraction_of_users_helped": 0.671875
+        },
+        "50": {
+          "n_users": 128,
+          "personal_spearman": 0.40616674132730174,
+          "residual_spearman": 0.5225654019979398,
+          "population_spearman_matched_cohort": 0.5053909782435612,
+          "gain_vs_population": 0.01717442375437861,
+          "fraction_of_users_helped": 0.6171875
+        },
+        "100": {
+          "n_users": 123,
+          "personal_spearman": 0.46125168124149624,
+          "residual_spearman": 0.5320284544298227,
+          "population_spearman_matched_cohort": 0.5066462565376795,
+          "gain_vs_population": 0.025382197892143243,
+          "fraction_of_users_helped": 0.6829268292682927
+        },
+        "250": {
+          "n_users": 41,
+          "personal_spearman": 0.4922094550151667,
+          "residual_spearman": 0.5135072837637988,
+          "population_spearman_matched_cohort": 0.4826493204469626,
+          "gain_vs_population": 0.030857963316836212,
+          "fraction_of_users_helped": 0.7073170731707317
+        },
+        "500": {
+          "n_users": 21,
+          "personal_spearman": 0.5026665032302581,
+          "residual_spearman": 0.5124885739007831,
+          "population_spearman_matched_cohort": 0.4717387634145699,
+          "gain_vs_population": 0.04074981048621318,
+          "fraction_of_users_helped": 0.7142857142857143
+        }
+      },
+      "labels_to_beat_population": 10
+    }
+  },
+  "artifacts": {},
+  "notes": [],
+  "started_at": "2026-09-03T10:49:10",
+  "duration_sec": 296.16,
+  "hardware": {
+    "gpu": "NVIDIA RTX A6000, 49140 MiB",
+    "cpu": "x86_64",
+    "platform": "Linux-6.8.0-106-generic-x86_64-with-glibc2.35"
+  },
+  "software": {
+    "python": "3.11.15",
+    "numpy": "2.4.6",
+    "sklearn": "1.9.0",
+    "onnxruntime": "1.22.0",
+    "torch": "2.11.0+cu128"
+  },
+  "config_hash": "3623852c8cbb3e2a"
+}

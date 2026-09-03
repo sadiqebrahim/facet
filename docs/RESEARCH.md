@@ -229,6 +229,45 @@ core requirement** (§6.9, §15.5) because it is the only principled resolution.
 
 Full write-up: `experiments/e7_cross_dataset/FINDINGS.md`.
 
+**E14 — personalisation — has now run, and the answer is conditional on rater-pool
+diversity.** E7 implied a per-user model was the fix; E14 tested it by simulating users from
+individual raters (SCUT: 60 raters × 5,500, complete; MEBeauty: 360 raters, sparse).
+
+First, a ceiling measured rather than assumed. Seven SCUT raters rated all 5,500 images
+**twice**, so their test–retest reliability is directly observable:
+
+| | Spearman |
+|---|---:|
+| A rater vs. **themselves** on a re-rating | **0.575** |
+| A rater vs. the **consensus of the other 59** | **0.766** |
+| Attenuation limit (√reliability) — max any predictor can reach vs. a single rating | **0.758** |
+
+**People agree with the crowd more than with their own earlier judgment** — a single rating
+is noisy, the mean of 59 is not. Our population model reaches 0.7238, or **95.5 % of the
+theoretical maximum**. This retires an assumption in §1.1: the remaining gap on SCUT is rater
+*noise*, not unmodelled personal taste.
+
+Consequently:
+
+1. **In a homogeneous pool, personalisation actively hurts.** On SCUT it never beat the
+   population model at any budget from 10 to 2,000 labels (worst −0.026 at 500), helping only
+   7–28 % of users. There is no headroom to personalise into.
+2. **In a diverse pool it works, and cheaply.** On MEBeauty, gains are positive from 10
+   labels and reach **+0.025 Spearman at 100 labels**, helping 68 % of users. Same code, same
+   features — **personalisation headroom is a property of rater-pool diversity, not of the
+   algorithm.**
+3. **The residual formulation of §15.5 is confirmed.** Training on a user's labels alone is
+   catastrophic cold-start (ρ 0.21 vs 0.51 at 10 labels); `population + user_residual`
+   degrades gracefully to the population model.
+4. **Personalise selectively.** Users the consensus fits *worst* gain **5.4×** more than
+   those it fits best (+0.048 vs +0.009). Gate personalisation on population-model fit —
+   which also avoids the SCUT noise-fitting failure.
+
+Importantly, this **does not** resolve E7. A +0.025 refinement does not offset 80 % of a
+top-100 changing between rater pools. Which pool the population model was trained on still
+dominates, so §12.2 Path B's "collect our own ratings" remains the real lever.
+Full write-up: `experiments/e14_personalisation/FINDINGS.md`.
+
 ### 1.5 The licensing problem, stated early because it constrains everything
 
 | Asset | License | Commercial? |
@@ -1420,7 +1459,7 @@ absolute ratings, and it plugs straight into the Bradley–Terry machinery from 
 | **9** | Query + ranking engine | Brief's example queries work |
 | **10** | API | Stable contract, versioned |
 | **11** | UI | Phase-11 feature list |
-| **12 ⬆** | E14 personalisation — **promoted to core by E7** | Beats population model within a realistic label budget |
+| **12 ✅** | E14 personalisation — promoted to core by E7 | ✅ **conditional**: +0.025 Spearman at 100 labels in a *diverse* pool; actively harmful in a homogeneous one. Residual formulation confirmed; gate on population fit |
 | **13** | Optimisation, batching, ONNX/TensorRT | Throughput target on A6000 |
 
 Stage 5 is the real gate. Everything before it is research; everything after assumes the research
