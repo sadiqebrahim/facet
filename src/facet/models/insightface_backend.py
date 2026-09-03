@@ -224,3 +224,50 @@ class ArcFaceEmbedder:
             np.concatenate(outs).astype(np.float32),
             np.concatenate(norms).astype(np.float32),
         )
+
+
+class GenderAgePredictor:
+    """InsightFace `genderage` model - the cheap off-the-shelf attribute baseline.
+
+    Included so E11 can audit demographic performance end to end without first acquiring
+    MiVOLO. Its accuracy is well below MiVOLO's (docs/RESEARCH.md 2.5); the point here is
+    to measure how error VARIES ACROSS GROUPS, which is a property of the model family
+    rather than of any one checkpoint.
+
+    LICENSING: research-only weights, like the rest of the InsightFace pack.
+    """
+
+    name = "insightface_genderage"
+    commercial_use = False
+    license = "research-only (weights); MIT (code)"
+
+    def __init__(self, pack: str = "buffalo_l", root: Path = DEFAULT_ROOT, use_gpu: bool = True):
+        path = Path(root) / pack / "genderage.onnx"
+        if not path.exists():
+            raise FileNotFoundError(f"missing genderage weights: {path}")
+        self.version = f"insightface:{pack}:genderage.onnx"
+        self.sess = _session(path, use_gpu)
+        self.input_name = self.sess.get_inputs()[0].name
+        self.input_size = int(self.sess.get_inputs()[0].shape[-1])
+
+    def predict(self, crops: np.ndarray, batch_size: int = 128):
+        """`crops`: (N, H, W, 3) BGR uint8, aligned. Returns (gender_prob_female, age).
+
+        The model emits 3 values: two gender logits followed by age/100.
+        """
+        genders, ages = [], []
+        for i in range(0, len(crops), batch_size):
+            batch = crops[i : i + batch_size]
+            if batch.shape[1] != self.input_size:
+                batch = np.stack(
+                    [cv2.resize(c, (self.input_size, self.input_size)) for c in batch]
+                )
+            x = batch[..., ::-1].astype(np.float32)
+            x = np.transpose(x, (0, 3, 1, 2)).copy()
+            out = self.sess.run(None, {self.input_name: x})[0]
+            logits = out[:, :2]
+            e = np.exp(logits - logits.max(axis=1, keepdims=True))
+            prob = e / e.sum(axis=1, keepdims=True)
+            genders.append(prob[:, 1])          # index 1 = male in InsightFace's ordering
+            ages.append(out[:, 2] * 100.0)
+        return np.concatenate(genders), np.concatenate(ages)

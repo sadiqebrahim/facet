@@ -346,6 +346,31 @@ harder one underneath it.**
 
 Full write-up: `experiments/e12_uncertainty/FINDINGS.md`.
 
+**E11 — the end-to-end fairness audit — has run on FairFace (10,954 images, balanced across
+seven perceived-race groups).** The §13.3 compounding hypothesis turns out to be **half right**:
+
+| stage | disparity | verdict |
+|---|---|---|
+| detection | recall spread **0.0006** (0.9998 overall) | ✅ clean |
+| gender | accuracy spread **0.101** by race, **0.174** by race × gender | ⚠ substantial |
+| age | MAE spread 2.79 yr by race, **13.9 yr by age bucket** | ⚠ substantial |
+| **attractiveness** | percentile spread **0.240**; top-100 skew **2.2× / 4.3×** | 🔴 **severe** |
+| photo-quality confound | **R² = 0.017** | ✅ not supported |
+
+There is **no detector bias to compound from** — a genuinely clean result, though measured on
+pre-cropped face-centred images, so cluttered-scene recall (E8) is still open. Disparity enters
+at the attribute stages and dominates at attractiveness: on a balanced set, the system selects
+White faces into its top 100 at **2.2× their share** and Southeast Asian faces at **0.23×**
+(§13.5).
+
+Two secondary findings worth carrying: age error varies **5× more by age bucket than by race**
+(children 16.7 yr, elderly 19.9 yr, vs 5.9 yr for 20–29), so a single global "±N years" claim
+would be dishonest; and the on-disk InsightFace `genderage` baseline manages only 78 % gender
+accuracy and 10.0 years MAE on diverse in-the-wild input — verified against crop and
+label-mapping errors before reporting — which settles the §2.5 recommendation to adopt MiVOLO.
+
+Full write-up: `experiments/e11_fairness/FINDINGS.md`.
+
 ### 1.5 The licensing problem, stated early because it constrains everything
 
 | Asset | License | Commercial? |
@@ -1290,10 +1315,14 @@ Recorded here so they can be measured (§14 E11) rather than discovered by a use
 4. **Constrained imagery.** Frontal, unoccluded, neutral expression, ages 15–60 [V]. Real
    directories are none of these.
 5. **Confounds.** Ratings encode makeup, hairstyle, photo quality, lighting and image resolution,
-   not just facial structure. A model may be partly learning *photography quality*. This is
-   testable: correlate predicted beauty with our quality score; a high correlation is evidence of
-   the confound (E11c). It also has a UI consequence — "attractiveness" that is partly
-   "well-photographed" should be described as such.
+   not just facial structure.
+   > **Narrowed by E11.** *Technical* capture quality is **not** the confound: correlations
+   > between predicted attractiveness and sharpness/exposure/contrast/resolution are all
+   > +0.05–0.09, and photography signals alone explain **R² = 0.017** of the variance. The
+   > hypothesis as originally stated is not supported. But E11 tested only capture quality —
+   > **styling** (makeup, hairstyle, grooming, clothing, expression) is exactly what CLIP encodes
+   > and ArcFace discards, is not measurable with a Laplacian, and remains untested. The styling
+   > half of this concern stands and needs a different probe.
 6. **Score compression.** Ratings concentrate near the middle (the paper fits a two-component
    Gaussian mixture [V]); the extremes — which is exactly where a top-N ranking product
    operates — are sparsely supported.
@@ -1312,11 +1341,46 @@ Recorded here so they can be measured (§14 E11) rather than discovered by a use
 
 ### 13.3 Compounding
 
-These stack multiplicatively through the pipeline. A dark-skinned face is more likely to be
-missed by the detector; if detected, more likely to be mis-gendered; if classified, its
-attractiveness prediction is pure extrapolation because no such faces were in the beauty
-training set. **The end-to-end disparity is larger than any single component's.** This is why
-§14 E11 evaluates fairness *end-to-end on FairFace*, not per component.
+These were expected to stack multiplicatively through the pipeline, which is why §14 E11
+evaluates fairness *end-to-end on FairFace* rather than per component.
+
+> **E11 result: the compounding story is half right.** There is no detector bias to compound
+> *from* — recall is 0.9998 with a spread of 0.0006 across seven balanced race groups, and
+> detector confidence is flat. But disparity grows sharply through the attribute stages:
+> gender accuracy spread **0.101** by race and **0.174** by race × gender (worst: East
+> Asian/Male 0.683); age MAE spread 2.79 years by race but **13.9 years by age bucket**; and
+> attractiveness percentile spread **0.240**. The severe stage is the last one, exactly as
+> predicted — see §13.5.
+> ⚠ Caveat: (a) was measured on FairFace's pre-cropped, face-centred images, which is close to
+> a best case for detection. Cluttered-scene recall (E8) is still untested, so the
+> "missed face is an invisible failure" concern is not yet retired.
+
+### 13.5 Measured top-100 skew — the number to put in front of users
+
+E11 applied the production attractiveness head to FairFace, which is **balanced by
+construction**, so every group should contribute roughly its population share to any top-N.
+
+| race | in top-100 | expected | |
+|---|---:|---:|---|
+| **White** | **41** | ~19 | **2.2× over-selected** |
+| East Asian | 20 | ~14 | 1.4× over |
+| Middle Eastern | 13 | ~11 | 1.2× over |
+| Black | 8 | ~14 | 0.6× under |
+| Latino_Hispanic | 8 | ~15 | 0.5× under |
+| Indian | 7 | ~14 | 0.5× under |
+| **Southeast Asian** | **3** | ~13 | **4.3× under-selected** |
+
+This is not a subtle statistical artefact — it is the dominant behaviour of the system on
+diverse input, and it lands in the only output a user ever sees. It confirms §13.1.3 and
+sharpens it: extrapolation to unseen groups is not merely noisy, it is **directionally
+biased**. Note also that East Asian is over-represented in the top-100 despite a *below*-average
+mean percentile, so the group distributions differ in **shape**, not just location — a single
+per-group offset would not fix this.
+
+The direction is a property of SCUT-FBP5500's rater pool, not a universal fact. A different
+training pool would produce a *different* skew, not no skew. That is the §1.1 argument arriving
+at its logical conclusion, and it is the strongest available argument for §12.2 Path B
+(collect our own ratings, with a rater pool appropriate to the users).
 
 ### 13.4 The honest framing
 
@@ -1557,7 +1621,7 @@ absolute ratings, and it plugs straight into the Bradley–Terry machinery from 
 | **4 ✅** | E5, E6 — crop protocol frozen, beauty objective chosen | ✅ E5: margin 0.25, protocol v2. ✅ E6: objectives indistinguishable on accuracy; `distribution` head selected for its auxiliary outputs |
 | **5 ✅** | **E7 cross-dataset** | ✅ **conditional pass**: ranking transfers (ρ 0.61, 72 % of within-dataset), absolute scores and cross-group calibration do not |
 | **6 ◑** | E4, E9, E12 — age/gender/quality/uncertainty selected | ✅ E12: conformal achieves nominal coverage in-domain (0.90) but only 0.43–0.78 under domain shift → per-collection calibration + OOD gating required. E4/E9 open |
-| **7** | E11 fairness audit | Disparities measured and documented |
+| **7 ✅** | E11 fairness audit | ✅ done: detection clean (0.0006 spread); attractiveness severe (top-100 skew 2.2×/4.3×). Published in §13.5, not buried |
 | **8** | Inference pipeline + incremental indexer | Indexes 100 k images without re-doing work |
 | **9** | Query + ranking engine | Brief's example queries work |
 | **10** | API | Stable contract, versioned |

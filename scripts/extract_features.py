@@ -23,6 +23,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from facet.data.fairface import FairFace  # noqa: E402
 from facet.data.mebeauty import MEBeauty  # noqa: E402
 from facet.data.scut_fbp5500 import ScutFbp5500  # noqa: E402
 from facet.models.insightface_backend import (  # noqa: E402
@@ -102,7 +103,7 @@ def build_crops(ds, names, dataset, margin, size, use_gpu, align="template",
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--dataset", default="scut", choices=["scut", "mebeauty"])
+    ap.add_argument("--dataset", default="scut", choices=["scut", "mebeauty", "fairface"])
     ap.add_argument("--data-root", default=None)
     ap.add_argument("--out-dir", default=str(ROOT / "artifacts/features"))
     ap.add_argument(
@@ -125,10 +126,14 @@ def main() -> int:
         root = args.data_root or str(ROOT / "data/raw/SCUT-FBP5500_v2")
         ds = ScutFbp5500(root)
         names = ds.filenames
-    else:
+    elif args.dataset == "mebeauty":
         root = args.data_root or str(ROOT / "data/raw/MEBeauty")
         ds = MEBeauty(root)
         names = ds.keys
+    else:
+        root = args.data_root or str(ROOT / "data/raw/FairFace")
+        ds = FairFace(root)
+        names = ds.filenames
     use_gpu = not args.cpu
 
     prefix = "" if args.dataset == "scut" else f"{args.dataset}__"

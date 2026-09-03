@@ -15,8 +15,11 @@ This system predicts **how a specific, narrow group of human raters would have r
 face**. It does not measure beauty. Beauty is not a property of faces that can be
 measured.
 
-That is not boilerplate — it is the central finding of the research phase and it shapes
-the architecture. The dataset everything is trained on (SCUT-FBP5500) was rated by 60
+That is not boilerplate — it is the central finding of the research phase, it shapes the
+architecture, and it is now measured: on a demographically **balanced** test set, this system
+selects White faces into its top-100 at 2.2× their population share and Southeast Asian faces
+at 0.23× ([E11](experiments/e11_fairness/FINDINGS.md)). That skew is a property of the rater
+pool the model was trained on. A different pool would give a different skew — not no skew. The dataset everything is trained on (SCUT-FBP5500) was rated by 60
 volunteers aged 18–27 at one Chinese university in 2017, and **those raters correlate
 with their own crowd average at only r ≈ 0.77**. Published models hit r ≈ 0.93 against
 that average — which means they are excellent at predicting *that specific group's mean*,
@@ -58,6 +61,8 @@ All processing is local. No image, crop, embedding or prediction leaves the mach
 | [`e6_objectives`](experiments/e6_objectives/FINDINGS.md) | Which training objective — regression, ordinal, LDL, pairwise, hybrid? | **None of them, on accuracy.** All five sit within **1.3 seed standard deviations** (Welch p = 0.068); a first single-seed run showed a 0.028 "win" that was pure noise. They differ ~8× on *auxiliary* outputs, so the LDL head wins for producing a usable rating distribution, not for being more accurate. Also corrects an over-claim from exp001. |
 
 | [`e12_uncertainty`](experiments/e12_uncertainty/FINDINGS.md) | Can we show an honest confidence number? | **In-domain yes, out-of-domain no.** Every *raw* uncertainty channel is badly miscalibrated — 0.998 to 0.065 coverage at a 68 % nominal level, failing in opposite directions. Conformal fixes all of them in-domain (0.90 at nominal 0.90). But calibrated on SCUT and applied to MEBeauty, **a 90 % interval delivers 43 %**. Calibration must be per-collection and OOD-gated. |
+
+| [`e11_fairness`](experiments/e11_fairness/FINDINGS.md) | Where does demographic bias actually enter? | **Not at detection** (recall spread 0.0006 across 7 balanced groups) — it enters late and hard. On a *balanced* set the system puts White faces in its top-100 at **2.2× their share** and Southeast Asian faces at **0.23×**. Gender accuracy spread 0.174; age error varies 5× more by age than by race. The photo-quality confound was tested and **not supported** (R² = 0.017) — though styling remains untested. |
 
 **What E7 changed.** Ranking works well enough to build on, so the project proceeds — but
 with a narrower scope than the brief assumed: absolute thresholds like "attractiveness above

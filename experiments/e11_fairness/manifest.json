@@ -1,0 +1,434 @@
+{
+  "experiment": "e11_fairness",
+  "description": "End-to-end demographic audit + attractiveness/quality confound test",
+  "config": {
+    "ff_root": "/home/dhruv/sadiq/facet/data/raw/FairFace",
+    "scut_root": "/home/dhruv/sadiq/facet/data/raw/SCUT-FBP5500_v2",
+    "out_dir": "/home/dhruv/sadiq/facet/experiments/e11_fairness",
+    "seed": 1337
+  },
+  "seed": 1337,
+  "dataset": "FairFace validation (balanced) + SCUT-FBP5500 for the beauty head",
+  "dataset_version": "",
+  "split_methodology": "Beauty head trained on ALL of SCUT-FBP5500 and applied to FairFace, which is entirely held out. FairFace labels are annotator-perceived and are used only to slice our own error rates.",
+  "metrics": {
+    "n_images": 10954,
+    "a_detection": {
+      "overall_recall": 0.9998174182946868,
+      "by_race": {
+        "Black": {
+          "n": 1556,
+          "recall": 0.9993573264781491,
+          "mean_det_score": 0.7643181085586548
+        },
+        "East Asian": {
+          "n": 1550,
+          "recall": 1.0,
+          "mean_det_score": 0.7553685903549194
+        },
+        "Indian": {
+          "n": 1516,
+          "recall": 1.0,
+          "mean_det_score": 0.7583106756210327
+        },
+        "Latino_Hispanic": {
+          "n": 1623,
+          "recall": 1.0,
+          "mean_det_score": 0.771345853805542
+        },
+        "Middle Eastern": {
+          "n": 1209,
+          "recall": 1.0,
+          "mean_det_score": 0.7587331533432007
+        },
+        "Southeast Asian": {
+          "n": 1415,
+          "recall": 1.0,
+          "mean_det_score": 0.7592369914054871
+        },
+        "White": {
+          "n": 2085,
+          "recall": 0.9995203836930455,
+          "mean_det_score": 0.7652220129966736
+        }
+      },
+      "by_group": {
+        "Black/Female": {
+          "n": 757,
+          "recall": 1.0
+        },
+        "Black/Male": {
+          "n": 799,
+          "recall": 0.9987484355444305
+        },
+        "East Asian/Female": {
+          "n": 773,
+          "recall": 1.0
+        },
+        "East Asian/Male": {
+          "n": 777,
+          "recall": 1.0
+        },
+        "Indian/Female": {
+          "n": 763,
+          "recall": 1.0
+        },
+        "Indian/Male": {
+          "n": 753,
+          "recall": 1.0
+        },
+        "Latino_Hispanic/Female": {
+          "n": 830,
+          "recall": 1.0
+        },
+        "Latino_Hispanic/Male": {
+          "n": 793,
+          "recall": 1.0
+        },
+        "Middle Eastern/Female": {
+          "n": 396,
+          "recall": 1.0
+        },
+        "Middle Eastern/Male": {
+          "n": 813,
+          "recall": 1.0
+        },
+        "Southeast Asian/Female": {
+          "n": 680,
+          "recall": 1.0
+        },
+        "Southeast Asian/Male": {
+          "n": 735,
+          "recall": 1.0
+        },
+        "White/Female": {
+          "n": 963,
+          "recall": 1.0
+        },
+        "White/Male": {
+          "n": 1122,
+          "recall": 0.9991087344028521
+        }
+      }
+    },
+    "b_gender": {
+      "overall_accuracy": 0.7805367902136205,
+      "by_race": {
+        "Black": {
+          "n": 1556,
+          "accuracy": 0.7294344473007712
+        },
+        "East Asian": {
+          "n": 1550,
+          "accuracy": 0.7593548387096775
+        },
+        "Indian": {
+          "n": 1516,
+          "accuracy": 0.7592348284960422
+        },
+        "Latino_Hispanic": {
+          "n": 1623,
+          "accuracy": 0.818237831176833
+        },
+        "Middle Eastern": {
+          "n": 1209,
+          "accuracy": 0.8304383788254756
+        },
+        "Southeast Asian": {
+          "n": 1415,
+          "accuracy": 0.7653710247349823
+        },
+        "White": {
+          "n": 2085,
+          "accuracy": 0.8019184652278177
+        }
+      },
+      "by_group": {
+        "Black/Female": {
+          "n": 757,
+          "accuracy": 0.7067371202113606
+        },
+        "Black/Male": {
+          "n": 799,
+          "accuracy": 0.7509386733416771
+        },
+        "East Asian/Female": {
+          "n": 773,
+          "accuracy": 0.8357050452781372
+        },
+        "East Asian/Male": {
+          "n": 777,
+          "accuracy": 0.6833976833976834
+        },
+        "Indian/Female": {
+          "n": 763,
+          "accuracy": 0.6959370904325033
+        },
+        "Indian/Male": {
+          "n": 753,
+          "accuracy": 0.8233731739707836
+        },
+        "Latino_Hispanic/Female": {
+          "n": 830,
+          "accuracy": 0.8180722891566266
+        },
+        "Latino_Hispanic/Male": {
+          "n": 793,
+          "accuracy": 0.8184110970996217
+        },
+        "Middle Eastern/Female": {
+          "n": 396,
+          "accuracy": 0.7752525252525253
+        },
+        "Middle Eastern/Male": {
+          "n": 813,
+          "accuracy": 0.8573185731857319
+        },
+        "Southeast Asian/Female": {
+          "n": 680,
+          "accuracy": 0.7838235294117647
+        },
+        "Southeast Asian/Male": {
+          "n": 735,
+          "accuracy": 0.7482993197278912
+        },
+        "White/Female": {
+          "n": 963,
+          "accuracy": 0.8265835929387332
+        },
+        "White/Male": {
+          "n": 1122,
+          "accuracy": 0.7807486631016043
+        }
+      }
+    },
+    "c_age": {
+      "overall_mae": 10.038543222364945,
+      "by_race": {
+        "Black": {
+          "n": 1556,
+          "mae": 11.826776735886817
+        },
+        "East Asian": {
+          "n": 1550,
+          "mae": 9.032274560851436
+        },
+        "Indian": {
+          "n": 1516,
+          "mae": 10.039658318408875
+        },
+        "Latino_Hispanic": {
+          "n": 1623,
+          "mae": 10.015816930481774
+        },
+        "Middle Eastern": {
+          "n": 1209,
+          "mae": 9.251930285722782
+        },
+        "Southeast Asian": {
+          "n": 1415,
+          "mae": 10.007224524737246
+        },
+        "White": {
+          "n": 2085,
+          "mae": 9.946337160961233
+        }
+      },
+      "by_age_bucket": {
+        "0-2": {
+          "n": 199,
+          "mae": 12.420543034472058
+        },
+        "10-19": {
+          "n": 1181,
+          "mae": 12.6040270288146
+        },
+        "20-29": {
+          "n": 3300,
+          "mae": 5.923353674520146
+        },
+        "3-9": {
+          "n": 1356,
+          "mae": 16.744310011730082
+        },
+        "30-39": {
+          "n": 2330,
+          "mae": 6.741518475262392
+        },
+        "40-49": {
+          "n": 1353,
+          "mae": 10.954534307199324
+        },
+        "50-59": {
+          "n": 796,
+          "mae": 14.919574443718895
+        },
+        "60-69": {
+          "n": 321,
+          "mae": 17.45356936469628
+        },
+        "70+": {
+          "n": 118,
+          "mae": 19.872940532231734
+        }
+      }
+    },
+    "d_attractiveness": {
+      "by_race": {
+        "Black": {
+          "n": 1556,
+          "mean_score": 2.7709318155801084,
+          "mean_percentile": 0.5125626128521562
+        },
+        "East Asian": {
+          "n": 1550,
+          "mean_score": 2.6771272890798508,
+          "mean_percentile": 0.4462963890050475
+        },
+        "Indian": {
+          "n": 1516,
+          "mean_score": 2.7122132345680194,
+          "mean_percentile": 0.47298781351422575
+        },
+        "Latino_Hispanic": {
+          "n": 1623,
+          "mean_score": 2.7634689474429015,
+          "mean_percentile": 0.5061214088467867
+        },
+        "Middle Eastern": {
+          "n": 1209,
+          "mean_score": 2.8775563087218847,
+          "mean_percentile": 0.5793046053328054
+        },
+        "Southeast Asian": {
+          "n": 1415,
+          "mean_score": 2.532181744103718,
+          "mean_percentile": 0.35654171540350876
+        },
+        "White": {
+          "n": 2085,
+          "mean_score": 2.9076050345560343,
+          "mean_percentile": 0.5970373162853686
+        }
+      },
+      "by_group": {
+        "Black/Female": {
+          "n": 757,
+          "mean_score": 2.699230980211709,
+          "mean_percentile": 0.46876942342530514
+        },
+        "Black/Male": {
+          "n": 799,
+          "mean_score": 2.838863645835275,
+          "mean_percentile": 0.5540537823091353
+        },
+        "East Asian/Female": {
+          "n": 773,
+          "mean_score": 2.6721805952499014,
+          "mean_percentile": 0.43865762528990454
+        },
+        "East Asian/Male": {
+          "n": 777,
+          "mean_score": 2.682048517304498,
+          "mean_percentile": 0.4538958283252605
+        },
+        "Indian/Female": {
+          "n": 763,
+          "mean_score": 2.6324589899295594,
+          "mean_percentile": 0.41985010113782145
+        },
+        "Indian/Male": {
+          "n": 753,
+          "mean_score": 2.793026632521732,
+          "mean_percentile": 0.5268312060018705
+        },
+        "Latino_Hispanic/Female": {
+          "n": 830,
+          "mean_score": 2.69292180322739,
+          "mean_percentile": 0.4583433239989353
+        },
+        "Latino_Hispanic/Male": {
+          "n": 793,
+          "mean_score": 2.8373076986394645,
+          "mean_percentile": 0.5561287359889263
+        },
+        "Middle Eastern/Female": {
+          "n": 396,
+          "mean_score": 2.7894214075623136,
+          "mean_percentile": 0.524225618426367
+        },
+        "Middle Eastern/Male": {
+          "n": 813,
+          "mean_score": 2.920485485670458,
+          "mean_percentile": 0.6061327465566055
+        },
+        "Southeast Asian/Female": {
+          "n": 680,
+          "mean_score": 2.505606185688692,
+          "mean_percentile": 0.34156465808890657
+        },
+        "Southeast Asian/Male": {
+          "n": 735,
+          "mean_score": 2.556768655290409,
+          "mean_percentile": 0.3703980405381068
+        },
+        "White/Female": {
+          "n": 963,
+          "mean_score": 2.87091303639199,
+          "mean_percentile": 0.5704910898042241
+        },
+        "White/Male": {
+          "n": 1122,
+          "mean_score": 2.9390973645310563,
+          "mean_percentile": 0.6198216443614311
+        }
+      },
+      "percentile_spread_race": 0.24049560088185984,
+      "percentile_spread_group": 0.2782569862725245,
+      "top100_composition": {
+        "Black": 8,
+        "East Asian": 20,
+        "Indian": 7,
+        "Latino_Hispanic": 8,
+        "Middle Eastern": 13,
+        "Southeast Asian": 3,
+        "White": 41
+      },
+      "top100_expected_if_uniform": {
+        "Black": 14.2,
+        "East Asian": 14.2,
+        "Indian": 13.8,
+        "Latino_Hispanic": 14.8,
+        "Middle Eastern": 11.0,
+        "Southeast Asian": 12.9,
+        "White": 19.0
+      }
+    },
+    "e_confound": {
+      "quality_composite": 0.08519198197508,
+      "blur": 0.07381460962120316,
+      "contrast": 0.08876292679942901,
+      "luminance": 0.05004445561783093,
+      "face_pixels": 0.05505762484040022,
+      "det_score": -0.01803989329083261,
+      "photography_only_r2": 0.017137405925448546
+    }
+  },
+  "artifacts": {},
+  "notes": [],
+  "started_at": "2026-09-03T14:03:32",
+  "duration_sec": 59.61,
+  "hardware": {
+    "gpu": "NVIDIA RTX A6000, 49140 MiB",
+    "cpu": "x86_64",
+    "platform": "Linux-6.8.0-106-generic-x86_64-with-glibc2.35"
+  },
+  "software": {
+    "python": "3.11.15",
+    "numpy": "2.4.6",
+    "sklearn": "1.9.0",
+    "onnxruntime": "1.22.0",
+    "torch": "2.11.0+cu128"
+  },
+  "config_hash": "530e7d9d0a09b2c1"
+}
