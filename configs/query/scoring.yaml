@@ -38,7 +38,26 @@ preferences:
 # gender/ethnicity groups. Ranking all groups together as if scores were comparable is not
 # supportable without disclosing that. Options: 'global' (bias surfaced in the UI) or
 # 'within_group'.
-cross_group_ranking:
+cross_group_# E12: confidence policy. Raw model spread is NEVER shown - measured coverage ranged from
+# 0.065 to 0.998 at a 68% nominal level across five methods. Conformal recalibration fixes
+# this in-domain, but its guarantee assumes exchangeability: intervals calibrated on one
+# collection delivered only 43-78% of nominal coverage on a shifted domain. So calibration
+# is per-collection, and intervals are suppressed rather than shown when the face is
+# out-of-distribution.
+confidence:
+  method: conformal
+  channel: combined          # sqrt(aleatoric^2 + epistemic^2); see e12_uncertainty
+  calibration: per_collection
+  calibration_sample_size: 500
+  levels: [0.68, 0.90, 0.95]
+  ood_gate:
+    enabled: true
+    on_trigger: suppress_numeric_confidence   # suppress | widen
+  # The plain LDL head's spread tracks TRUE rater disagreement at only r=0.139, so the
+  # "this face is polarising" badge is driven by the hybrid head instead (r=0.344).
+  polarising_signal_head: hybrid
+
+ranking:
   mode: global
   surface_measured_bias: true
 
@@ -46,6 +65,25 @@ cross_group_ranking:
 # uncertain criterion contributes little in either direction rather than contributing a
 # confident-looking wrong answer. Each term is also a row in the "why this result" panel.
 confidence_weighting: true
+
+# E12: confidence policy. Raw model spread is NEVER shown - measured coverage ranged from
+# 0.065 to 0.998 at a 68% nominal level across five methods. Conformal recalibration fixes
+# this in-domain, but its guarantee assumes exchangeability: intervals calibrated on one
+# collection delivered only 43-78% of nominal coverage on a shifted domain. So calibration
+# is per-collection, and intervals are suppressed rather than shown when the face is
+# out-of-distribution.
+confidence:
+  method: conformal
+  channel: combined          # sqrt(aleatoric^2 + epistemic^2); see e12_uncertainty
+  calibration: per_collection
+  calibration_sample_size: 500
+  levels: [0.68, 0.90, 0.95]
+  ood_gate:
+    enabled: true
+    on_trigger: suppress_numeric_confidence   # suppress | widen
+  # The plain LDL head's spread tracks TRUE rater disagreement at only r=0.139, so the
+  # "this face is polarising" badge is driven by the hybrid head instead (r=0.344).
+  polarising_signal_head: hybrid
 
 ranking:
   sort_by: relevance      # relevance | attractiveness | confidence | age_match | quality

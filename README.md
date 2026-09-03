@@ -57,6 +57,8 @@ All processing is local. No image, crop, embedding or prediction leaves the mach
 
 | [`e6_objectives`](experiments/e6_objectives/FINDINGS.md) | Which training objective — regression, ordinal, LDL, pairwise, hybrid? | **None of them, on accuracy.** All five sit within **1.3 seed standard deviations** (Welch p = 0.068); a first single-seed run showed a 0.028 "win" that was pure noise. They differ ~8× on *auxiliary* outputs, so the LDL head wins for producing a usable rating distribution, not for being more accurate. Also corrects an over-claim from exp001. |
 
+| [`e12_uncertainty`](experiments/e12_uncertainty/FINDINGS.md) | Can we show an honest confidence number? | **In-domain yes, out-of-domain no.** Every *raw* uncertainty channel is badly miscalibrated — 0.998 to 0.065 coverage at a 68 % nominal level, failing in opposite directions. Conformal fixes all of them in-domain (0.90 at nominal 0.90). But calibrated on SCUT and applied to MEBeauty, **a 90 % interval delivers 43 %**. Calibration must be per-collection and OOD-gated. |
+
 **What E7 changed.** Ranking works well enough to build on, so the project proceeds — but
 with a narrower scope than the brief assumed: absolute thresholds like "attractiveness above
 4.0" are not supportable across domains and are replaced by percentile-within-collection;

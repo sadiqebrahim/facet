@@ -322,6 +322,30 @@ early-stopping criterion:
 **Production head: `distribution` (LDL)** — chosen for what it reports, not for accuracy.
 Full write-up: `experiments/e6_objectives/FINDINGS.md`.
 
+**E12 — uncertainty and calibration — has run, and it both fixes exp001's defect and finds a
+harder one underneath it.**
+
+1. **Every raw uncertainty channel is badly miscalibrated**, not just the bagging exp001
+   flagged. At a nominal 68 %: aleatoric covers **0.998** (σ = 1.07 against an MAE of 0.19 — it
+   measures rater disagreement, not model error), while ensemble covers **0.065** and TTA
+   **0.074** (five linear heads agree almost perfectly, so member spread ignores the dominant
+   irreducible noise). They fail in opposite directions. **No raw model output may be shown as
+   confidence** — now measured across five methods.
+2. **Conformal fixes coverage for all of them in-domain** (0.89–0.91 at nominal 0.90), so the
+   discriminator becomes *sharpness*: aleatoric and combined give the tightest intervals
+   (width 0.82 at 90 %), TTA is 3× wider for the same coverage and is dropped.
+3. ⚠ **Conformal does not survive the domain shift.** Calibrated on SCUT and applied to
+   MEBeauty, a nominal 90 % interval delivers **43 % (aleatoric) to 78 % (TTA)** coverage. The
+   in-domain ranking *inverts*: the epistemic channels degrade least, the aleatoric channel
+   most — which is mechanistically what should happen, since epistemic uncertainty is supposed
+   to grow off-distribution while a learned rating spread cannot know it is being asked about
+   an unfamiliar face. **Calibration must be per-collection and OOD-gated**, which promotes
+   §11.1's OOD channel from optional to required.
+4. **The LDL head is a poor polarising-face detector** (r = 0.139 vs true rater σ), tempering
+   §6.3 and §11.1 — see the note in §11.1. Use the hybrid head for that signal.
+
+Full write-up: `experiments/e12_uncertainty/FINDINGS.md`.
+
 ### 1.5 The licensing problem, stated early because it constrains everything
 
 | Asset | License | Commercial? |
@@ -1103,7 +1127,14 @@ age. For age there is a true answer and uncertainty is mostly epistemic. For att
 **there is no true answer** — the irreducible aleatoric spread *is the phenomenon*. A face where
 raters split 50/50 is not a model failure; it is a real property of the face, and it is arguably
 more interesting to a user than a face everyone rates 3.5. **Only a distribution-predicting model
-can report this** (§6.3), which is the strongest single argument for choosing LDL over regression.
+can report this** (§6.3).
+
+> ⚠ **Tempered by E12.** The plain LDL head's predicted spread correlates with *true* rater
+> disagreement at only **r = 0.139** (E6 measured 0.154 on the same head). It is a good interval
+> width but a poor polarising-face detector — those are separate jobs. The **hybrid**
+> (KL + pairwise) head reaches r = 0.344, 2.2× better, and is the right choice for this specific
+> signal. The argument for distribution-predicting heads survives; the claim that the LDL head
+> in particular delivers it was too strong.
 
 ### 11.2 Recommended methods, in implementation order
 
@@ -1114,10 +1145,13 @@ can report this** (§6.3), which is the strongest single argument for choosing L
 2. **Test-time augmentation** — flip + jitter; cheap; applies to off-the-shelf models like MiVOLO
    that we cannot ensemble by retraining.
 3. **Conformal prediction** — gives distribution-free coverage guarantees ("90 % of true values
-   fall in this interval") from a calibration set. Search results are consistent that conformal
-   "approximates the desired coverage level best for all methods, regardless of the initial
-   coverage they obtain" [S]. **This is what the UI should display**, because it is the only
-   method whose stated confidence means what a user thinks it means.
+   fall in this interval") from a calibration set. **This is what the UI should display**,
+   because it is the only method whose stated confidence means what a user thinks it means.
+   ⚠ **E12 qualification:** conformal restored nominal coverage for *every* channel in-domain
+   (0.89–0.91 at nominal 0.90), but its guarantee holds only under exchangeability. Applied
+   across the domain shift to MEBeauty, a nominal 90 % interval delivered **43–78 % actual
+   coverage**. Calibration must therefore be per-collection (sampled from the user's own
+   directory) and gated on an OOD signal, not shipped as fixed constants.
 4. **Temperature scaling** for the classification heads — one parameter, fitted on validation,
    removes most miscalibration.
 5. **MC dropout** — cheaper than ensembles but weaker, and it degrades the base prediction [S].
@@ -1522,7 +1556,7 @@ absolute ratings, and it plugs straight into the Bradley–Terry machinery from 
 | **3** | E3 fine-tuned reference | Reproduce published 0.89/0.90 → harness trusted |
 | **4 ✅** | E5, E6 — crop protocol frozen, beauty objective chosen | ✅ E5: margin 0.25, protocol v2. ✅ E6: objectives indistinguishable on accuracy; `distribution` head selected for its auxiliary outputs |
 | **5 ✅** | **E7 cross-dataset** | ✅ **conditional pass**: ranking transfers (ρ 0.61, 72 % of within-dataset), absolute scores and cross-group calibration do not |
-| **6** | E4, E9, E12 — age/gender/quality/uncertainty selected | Calibrated intervals achieve nominal coverage |
+| **6 ◑** | E4, E9, E12 — age/gender/quality/uncertainty selected | ✅ E12: conformal achieves nominal coverage in-domain (0.90) but only 0.43–0.78 under domain shift → per-collection calibration + OOD gating required. E4/E9 open |
 | **7** | E11 fairness audit | Disparities measured and documented |
 | **8** | Inference pipeline + incremental indexer | Indexes 100 k images without re-doing work |
 | **9** | Query + ranking engine | Brief's example queries work |

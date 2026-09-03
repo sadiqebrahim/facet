@@ -1,0 +1,176 @@
+{
+  "experiment": "e12_uncertainty",
+  "description": "Which uncertainty method produces a confidence the UI can honestly show?",
+  "config": {
+    "scut_root": "/home/dhruv/sadiq/facet/data/raw/SCUT-FBP5500_v2",
+    "me_root": "/home/dhruv/sadiq/facet/data/raw/MEBeauty",
+    "out_dir": "/home/dhruv/sadiq/facet/experiments/e12_uncertainty",
+    "members": 5,
+    "seed": 1337
+  },
+  "seed": 1337,
+  "dataset": "SCUT-FBP5500_v2 (+ MEBeauty for shifted-domain calibration)",
+  "dataset_version": "",
+  "split_methodology": "SCUT official cv1. Training split further divided into fit / conformal calibration. Domain-shift test: intervals calibrated on SCUT, applied to MEBeauty after rescaling MEBeauty's 1-10 scale onto SCUT's 1-5.",
+  "metrics": {
+    "in_domain": {
+      "aleatoric": {
+        "coverage_68": 0.9981818181818182,
+        "coverage_90": 1.0,
+        "coverage_95": 1.0,
+        "mean_interval_width_90": 3.5103333260492846,
+        "err_sigma_spearman": 0.0818750128193194,
+        "mean_sigma": 1.0669706158204513,
+        "mean_abs_err": 0.1920810415903671
+      },
+      "ensemble": {
+        "coverage_68": 0.06545454545454546,
+        "coverage_90": 0.1190909090909091,
+        "coverage_95": 0.14272727272727273,
+        "mean_interval_width_90": 0.07545801326236581,
+        "err_sigma_spearman": 0.1401364854621593,
+        "mean_sigma": 0.022935566341144624,
+        "mean_abs_err": 0.1920810415903671
+      },
+      "mc_dropout": {
+        "coverage_68": 0.28454545454545455,
+        "coverage_90": 0.46636363636363637,
+        "coverage_95": 0.5427272727272727,
+        "mean_interval_width_90": 0.2953847465008497,
+        "err_sigma_spearman": 0.12413968786901328,
+        "mean_sigma": 0.08978259772062301,
+        "mean_abs_err": 0.1920810415903671
+      },
+      "tta": {
+        "coverage_68": 0.07363636363636364,
+        "coverage_90": 0.13454545454545455,
+        "coverage_95": 0.1590909090909091,
+        "mean_interval_width_90": 0.08916889589279403,
+        "err_sigma_spearman": 0.0836071436654241,
+        "mean_sigma": 0.027103007870150162,
+        "mean_abs_err": 0.1920810415903671
+      },
+      "combined": {
+        "coverage_68": 0.9981818181818182,
+        "coverage_90": 1.0,
+        "coverage_95": 1.0,
+        "mean_interval_width_90": 3.511359531950409,
+        "err_sigma_spearman": 0.08206570568916324,
+        "mean_sigma": 1.067282532507723,
+        "mean_abs_err": 0.1920810415903671
+      }
+    },
+    "shifted": {
+      "aleatoric": {
+        "0.32": 0.2357142857142857,
+        "0.1": 0.42817460317460315,
+        "0.05": 0.5253968253968254
+      },
+      "ensemble": {
+        "0.32": 0.4777777777777778,
+        "0.1": 0.7567460317460317,
+        "0.05": 0.8757936507936508
+      },
+      "mc_dropout": {
+        "0.32": 0.32896825396825397,
+        "0.1": 0.5658730158730159,
+        "0.05": 0.6865079365079365
+      },
+      "tta": {
+        "0.32": 0.46984126984126984,
+        "0.1": 0.7805555555555556,
+        "0.05": 0.8785714285714286
+      },
+      "combined": {
+        "0.32": 0.2357142857142857,
+        "0.1": 0.42817460317460315,
+        "0.05": 0.5261904761904762
+      }
+    },
+    "conformal": {
+      "aleatoric": {
+        "q": {
+          "0.32": 0.21182971049758573,
+          "0.1": 0.38496031162265326,
+          "0.05": 0.47259824747812207
+        },
+        "coverage": {
+          "0.32": 0.6881818181818182,
+          "0.1": 0.9072727272727272,
+          "0.05": 0.9436363636363636
+        },
+        "width90": 0.8214826815169104
+      },
+      "ensemble": {
+        "q": {
+          "0.32": 11.46414927694946,
+          "0.1": 23.356392088298524,
+          "0.05": 34.749909262731435
+        },
+        "coverage": {
+          "0.32": 0.6627272727272727,
+          "0.1": 0.8927272727272727,
+          "0.05": 0.9545454545454546
+        },
+        "width90": 1.0713841604619123
+      },
+      "mc_dropout": {
+        "q": {
+          "0.32": 2.6917033291128574,
+          "0.1": 4.659704646326103,
+          "0.05": 5.952989503514111
+        },
+        "coverage": {
+          "0.32": 0.69,
+          "0.1": 0.8981818181818182,
+          "0.05": 0.9463636363636364
+        },
+        "width90": 0.836720775516029
+      },
+      "tta": {
+        "q": {
+          "0.32": 14.26064251300667,
+          "0.1": 46.21539975352312,
+          "0.05": 87.57121278503091
+        },
+        "coverage": {
+          "0.32": 0.6963636363636364,
+          "0.1": 0.8927272727272727,
+          "0.05": 0.9345454545454546
+        },
+        "width90": 2.505152686483746
+      },
+      "combined": {
+        "q": {
+          "0.32": 0.21180746469949596,
+          "0.1": 0.38490068117347076,
+          "0.05": 0.47246727968617797
+        },
+        "coverage": {
+          "0.32": 0.6881818181818182,
+          "0.1": 0.9072727272727272,
+          "0.05": 0.9436363636363636
+        },
+        "width90": 0.8215955475335391
+      }
+    },
+    "aleatoric_vs_true_rater_std": 0.13939661195557607
+  },
+  "artifacts": {},
+  "notes": [],
+  "started_at": "2026-09-03T13:53:54",
+  "duration_sec": 11.32,
+  "hardware": {
+    "gpu": "NVIDIA RTX A6000, 49140 MiB",
+    "cpu": "x86_64",
+    "platform": "Linux-6.8.0-106-generic-x86_64-with-glibc2.35"
+  },
+  "software": {
+    "python": "3.11.15",
+    "numpy": "2.4.6",
+    "sklearn": "1.9.0",
+    "onnxruntime": "1.22.0",
+    "torch": "2.11.0+cu128"
+  },
+  "config_hash": "111a2bdea91e0f45"
+}

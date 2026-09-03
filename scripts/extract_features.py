@@ -114,6 +114,8 @@ def main() -> int:
     ap.add_argument("--size", type=int, default=112)
     ap.add_argument("--align", default="template", choices=["template", "bbox"],
                     help="template = ArcFace 5-point similarity transform; bbox = plain crop")
+    ap.add_argument("--flip", action="store_true",
+                    help="horizontally mirror crops before encoding (test-time augmentation)")
     ap.add_argument("--cpu", action="store_true")
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
@@ -131,6 +133,8 @@ def main() -> int:
 
     prefix = "" if args.dataset == "scut" else f"{args.dataset}__"
     suffix = "" if args.align == "template" else f"__{args.align}"
+    if args.flip:
+        suffix += "__flip"
     key = f"{prefix}{args.encoder}__m{args.margin:g}__s{args.size}{suffix}"
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -174,6 +178,12 @@ def main() -> int:
             ds, names, args.dataset, args.margin, args.size, use_gpu,
             align=args.align, cache_dir=Path(args.out_dir).parent / "detections",
         )
+        if args.flip:
+            # Mirrored view for test-time augmentation. Faces are near-symmetric, so a
+            # flip is a label-preserving perturbation: the spread between the two views
+            # is a cheap uncertainty signal that works on frozen off-the-shelf models
+            # which cannot be ensembled by retraining (docs/RESEARCH.md 11.2).
+            crops = crops[:, :, ::-1, :].copy()
         if args.encoder.startswith("arcface"):
             pack = args.encoder.replace("arcface_", "")
             enc = ArcFaceEmbedder(pack=pack, use_gpu=use_gpu)
@@ -198,6 +208,7 @@ def main() -> int:
         "crop_margin": args.margin,
         "crop_size": args.size,
         "align": args.align,
+        "flip": args.flip,
         "n": len(names),
         "dim": int(feats.shape[1]),
         "filenames": names,
