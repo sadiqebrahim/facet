@@ -289,6 +289,39 @@ representations, reporting both in-benchmark PC and transfer to held-out MEBeaut
 
 Full write-up: `experiments/e5_crop_sensitivity/FINDINGS.md`.
 
+**E6 — the objective comparison — has run, and its headline is a null result that matters.**
+Five losses (MSE regression / CORAL ordinal / LDL distribution / Bradley–Terry pairwise /
+KL+pairwise hybrid) over identical frozen features, head, optimiser, schedule and
+early-stopping criterion:
+
+| objective | 5-fold PC | transfer ρ | KL to true histogram | aleatoric r |
+|---|---:|---:|---:|---:|
+| regression | 0.9345 | 0.6261 ± 0.0070 | — | — |
+| ordinal | 0.9349 | 0.6152 ± 0.0072 | 2.4817 | 0.238 |
+| **distribution** | **0.9387** | 0.6213 ± 0.0061 | **0.3192** | 0.154 |
+| pairwise | 0.9353 | **0.6262 ± 0.0088** | — | — |
+| hybrid | 0.9335 | 0.6117 ± 0.0105 | 0.3666 | **0.344** |
+
+1. **On accuracy the objectives are statistically indistinguishable.** Best-to-worst transfer
+   gap is 0.0145 against a pooled seed std of 0.0109 — **1.3 seed-std, Welch p = 0.068**.
+   In-benchmark PC spans 0.005, against a backbone-choice span of 0.076 (E5). **The loss
+   function is not where the performance is**; representation and crop dominate it by an order
+   of magnitude.
+2. **This corrects an over-claim in exp001**, which reported LDL beating regression on every
+   representation and treated that as support for LDL. That was a ridge comparison on one
+   configuration with no variance estimate. Under matched training the effect is small
+   in-benchmark and absent on transfer.
+3. **So the objective should be chosen on its auxiliary outputs, where differences are
+   ~8×.** Only `distribution` and `hybrid` produce a usable rating distribution; `ordinal`'s
+   implied pmf is poor (KL 2.48); `regression` and `pairwise` produce none at all and so
+   cannot support §11's uncertainty decomposition or §9.3's `P(rating ≥ 4)` ranking target.
+4. **A methodological lesson worth carrying:** the first single-seed run showed a 0.028
+   transfer gap that looked like a clean win for regression. It was entirely noise. Every
+   future single-run comparison in this project reports seed variance.
+
+**Production head: `distribution` (LDL)** — chosen for what it reports, not for accuracy.
+Full write-up: `experiments/e6_objectives/FINDINGS.md`.
+
 ### 1.5 The licensing problem, stated early because it constrains everything
 
 | Asset | License | Commercial? |
@@ -754,8 +787,12 @@ What it gives us that regression cannot:
 
 - **Cons:** needs per-rater labels (we have them for SCUT-FBP5500, but not for most datasets);
   slightly more complex head; must handle the fact that not every rater rated every image.
-- **Verdict:** **primary candidate.** Cheap to add (the head is `Linear → softmax` over ~5–9 bins),
-  strictly more informative than regression, and reduces to regression whenever we want a scalar.
+- **Verdict:** **primary candidate — confirmed by E6, but for a different reason than expected.**
+  E6 found LDL is *not* more accurate than plain regression once seed variance is accounted for
+  (transfer 0.6213 vs 0.6261, well inside noise; exp001's apparent +0.002–0.018 PC advantage was
+  a single-configuration ridge comparison). It wins on its **auxiliary outputs**: it is the only
+  objective that yields a well-formed rating distribution (KL 0.319 vs ordinal's 2.48), which
+  §11 and §9.3 both require. Choose it for what it *reports*, not for its accuracy.
 
 ### 6.4 Pairwise ranking
 
@@ -771,9 +808,13 @@ model.
 - **Cons:** O(n²) pairs (mitigated by sampling); produces a score with no inherent units, so the
   UI needs a calibration layer (map to a percentile — which is arguably more honest anyway); no
   absolute threshold like "above 4.0" without post-hoc calibration.
-- **Verdict:** **primary candidate alongside 6.3.** These two are complementary, not competing:
-  LDL for the honest per-face distribution, ranking for the cross-dataset-robust ordering.
-  A combined objective (KL + λ·pairwise) is the specific thing I most want to test (E6).
+- **Verdict:** ⚠ **downgraded by E6.** The predicted cross-dataset advantage did not appear:
+  pairwise 0.6262 ± 0.0088 vs regression 0.6261 ± 0.0070 — identical. The combined KL + λ·pairwise
+  objective was also tested and was nominally the *worst* transfer arm (0.6117), though every
+  arm sits within ~1.3 seed standard deviations of every other. This does not refute UOL — one
+  dataset pair, a linear head, and rank-only evaluation already neutralises the scale mismatch
+  that motivates order learning — but the advantage is not there at this scale. Pairwise remains
+  valuable for a *different* reason: it is the natural format for user feedback (§6.9, E14).
 
 ### 6.5 Landmark / geometric approaches
 
@@ -1479,7 +1520,7 @@ absolute ratings, and it plugs straight into the Bradley–Terry machinery from 
 | **1 ✅** | `exp001` — frozen features + linear heads, reproducible harness | ✅ done: frozen CLIP+ArcFace reaches PC 0.9398, beating fine-tuned baselines |
 | **2 ◑** | E1 identity-leakage audit; identity-disjoint splits | ✅ audit done: ~5 % leakage, +0.003 PC impact. Disjoint splits still TODO |
 | **3** | E3 fine-tuned reference | Reproduce published 0.89/0.90 → harness trusted |
-| **4 ◑** | E5 ✅, E6 — crop protocol frozen, beauty objective chosen | ✅ E5: margin 0.25 selected on transfer, protocol frozen at v2. E6 (objective comparison) still open |
+| **4 ✅** | E5, E6 — crop protocol frozen, beauty objective chosen | ✅ E5: margin 0.25, protocol v2. ✅ E6: objectives indistinguishable on accuracy; `distribution` head selected for its auxiliary outputs |
 | **5 ✅** | **E7 cross-dataset** | ✅ **conditional pass**: ranking transfers (ρ 0.61, 72 % of within-dataset), absolute scores and cross-group calibration do not |
 | **6** | E4, E9, E12 — age/gender/quality/uncertainty selected | Calibrated intervals achieve nominal coverage |
 | **7** | E11 fairness audit | Disparities measured and documented |

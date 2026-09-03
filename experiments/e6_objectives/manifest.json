@@ -1,0 +1,138 @@
+{
+  "experiment": "e6_objectives",
+  "description": "Which training objective should the beauty head use?",
+  "config": {
+    "scut_root": "/home/dhruv/sadiq/facet/data/raw/SCUT-FBP5500_v2",
+    "me_root": "/home/dhruv/sadiq/facet/data/raw/MEBeauty",
+    "out_dir": "/home/dhruv/sadiq/facet/experiments/e6_objectives",
+    "seed": 1337,
+    "transfer_seeds": 5
+  },
+  "seed": 1337,
+  "dataset": "SCUT-FBP5500_v2 (+ MEBeauty transfer)",
+  "dataset_version": "",
+  "split_methodology": "SCUT official 5-fold; 10% of each training split held out for early stopping (uniform criterion: validation Spearman). Transfer: train on all 5500 SCUT, test on all 2520 held-out MEBeauty. Crop margin 0.25 (E5 protocol).",
+  "metrics": {
+    "regression": {
+      "pc": 0.934516316751081,
+      "mae": 0.19042862847304048,
+      "rmse": 0.24558766605828258,
+      "spearman": 0.9256635437557101,
+      "pairwise_acc": 0.881947667622122,
+      "ndcg@100": 0.9594311127321763,
+      "transfer_spearman": 0.62606175362932,
+      "transfer_spearman_std": 0.0069563535057170665,
+      "transfer_spearman_seeds": [
+        0.6188192163583809,
+        0.6351179520224202,
+        0.6172400485101976,
+        0.6311636450664526,
+        0.6279679061891488
+      ],
+      "transfer_pairwise": 0.7230586549493715
+    },
+    "ordinal": {
+      "pc": 0.9348935514756936,
+      "mae": 0.1901804872543716,
+      "rmse": 0.24482357297232463,
+      "spearman": 0.9259156029435209,
+      "pairwise_acc": 0.8821270025141784,
+      "ndcg@100": 0.9587717980895384,
+      "kl_to_true_hist": 2.4816534631609173,
+      "aleatoric_vs_true_std": 0.23752088151300238,
+      "transfer_spearman": 0.6151613445794326,
+      "transfer_spearman_std": 0.007152252310313626,
+      "transfer_spearman_seeds": [
+        0.6285473772944041,
+        0.6160426705569979,
+        0.6094514145994256,
+        0.6090670222306048,
+        0.6126982382157306
+      ],
+      "transfer_pairwise": 0.7185053434273089
+    },
+    "distribution": {
+      "pc": 0.938670385662786,
+      "mae": 0.18303247369875325,
+      "rmse": 0.2375415974682757,
+      "spearman": 0.9279928144440909,
+      "pairwise_acc": 0.88484428994122,
+      "ndcg@100": 0.9597596973744652,
+      "kl_to_true_hist": 0.3192440118327318,
+      "aleatoric_vs_true_std": 0.15378290626848293,
+      "transfer_spearman": 0.6213011978437267,
+      "transfer_spearman_std": 0.006055223583694489,
+      "transfer_spearman_seeds": [
+        0.6159762185375173,
+        0.6199340234902618,
+        0.6196967944900407,
+        0.6178299765748626,
+        0.6330689761259508
+      ],
+      "transfer_pairwise": 0.7209693823869815
+    },
+    "pairwise": {
+      "pc": 0.9352816394658067,
+      "mae": 0.18891210445946388,
+      "rmse": 0.24402864832118235,
+      "spearman": 0.9272863601103204,
+      "pairwise_acc": 0.8834059958357194,
+      "ndcg@100": 0.9605149485105757,
+      "transfer_spearman": 0.6261785587842967,
+      "transfer_spearman_std": 0.008848169592008945,
+      "transfer_spearman_seeds": [
+        0.6221182519034256,
+        0.6331008718860598,
+        0.6123237599353692,
+        0.6255647251937471,
+        0.6377851850028815
+      ],
+      "transfer_pairwise": 0.7231057512613295
+    },
+    "hybrid": {
+      "pc": 0.9334927713927472,
+      "mae": 0.1898322471478444,
+      "rmse": 0.2476125221557112,
+      "spearman": 0.9254832955157213,
+      "pairwise_acc": 0.8819015863854386,
+      "ndcg@100": 0.9568057356404989,
+      "kl_to_true_hist": 0.3666464856223265,
+      "aleatoric_vs_true_std": 0.34383746821104333,
+      "transfer_spearman": 0.6116557526973582,
+      "transfer_spearman_std": 0.010538704979869301,
+      "transfer_spearman_seeds": [
+        0.5957183101624959,
+        0.6162579003709904,
+        0.6053202828692968,
+        0.6140152746664542,
+        0.6269669954175534
+      ],
+      "transfer_pairwise": 0.7171155011999539
+    },
+    "_significance": {
+      "best": "pairwise",
+      "worst": "hybrid",
+      "gap": 0.014522806086938567,
+      "pooled_seed_std": 0.010878717978858818,
+      "gap_in_seed_stds": 1.3349740396948884,
+      "welch_p": 0.06779105207645378
+    }
+  },
+  "artifacts": {},
+  "notes": [],
+  "started_at": "2026-09-03T11:44:04",
+  "duration_sec": 119.92,
+  "hardware": {
+    "gpu": "NVIDIA RTX A6000, 49140 MiB",
+    "cpu": "x86_64",
+    "platform": "Linux-6.8.0-106-generic-x86_64-with-glibc2.35"
+  },
+  "software": {
+    "python": "3.11.15",
+    "numpy": "2.4.6",
+    "sklearn": "1.9.0",
+    "onnxruntime": "1.22.0",
+    "torch": "2.11.0+cu128"
+  },
+  "config_hash": "d4b7b9f0984822a7"
+}

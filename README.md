@@ -55,6 +55,8 @@ All processing is local. No image, crop, embedding or prediction leaves the mach
 
 | [`e5_crop_sensitivity`](experiments/e5_crop_sensitivity/FINDINGS.md) | Does the crop protocol matter more than the backbone? | **No — my prior was wrong.** Backbone choice spans 4–10× more than crop margin. But margin matters *hugely for ArcFace alone* (transfer +61 % relative), and the in-benchmark and transfer optima **disagree** — so the production margin moved 0.00 → **0.25**, worth +0.033 transfer ρ for free. |
 
+| [`e6_objectives`](experiments/e6_objectives/FINDINGS.md) | Which training objective — regression, ordinal, LDL, pairwise, hybrid? | **None of them, on accuracy.** All five sit within **1.3 seed standard deviations** (Welch p = 0.068); a first single-seed run showed a 0.028 "win" that was pure noise. They differ ~8× on *auxiliary* outputs, so the LDL head wins for producing a usable rating distribution, not for being more accurate. Also corrects an over-claim from exp001. |
+
 **What E7 changed.** Ranking works well enough to build on, so the project proceeds — but
 with a narrower scope than the brief assumed: absolute thresholds like "attractiveness above
 4.0" are not supportable across domains and are replaced by percentile-within-collection;
