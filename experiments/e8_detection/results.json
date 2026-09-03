@@ -1,0 +1,417 @@
+{
+  "buffalo_l d640 pad0.00": {
+    "config": "buffalo_l d640 pad0.00",
+    "pack": "buffalo_l",
+    "det_size": 640,
+    "pad_frac": 0.0,
+    "n_images": 3222,
+    "n_faces": 39112,
+    "recall_all": 0.510763959910002,
+    "recall_useful_ge32px": 0.8944084662770494,
+    "n_useful": 12662,
+    "detections_per_image": 6.4748603351955305,
+    "images_per_sec": 61.05290045367693,
+    "by_size": {
+      "tiny <16px": {
+        "n": 15266,
+        "recall": 0.11175160487357527
+      },
+      "small 16-32": {
+        "n": 11184,
+        "recall": 0.621065808297568
+      },
+      "medium 32-64": {
+        "n": 7553,
+        "recall": 0.8612471865483914
+      },
+      "large 64-128": {
+        "n": 3191,
+        "recall": 0.9348166718896898
+      },
+      "huge >=128": {
+        "n": 1918,
+        "recall": 0.9577685088633994
+      }
+    },
+    "by_blur": {
+      "clear": {
+        "n": 5365,
+        "recall": 0.8939422180801491
+      },
+      "normal": {
+        "n": 10378,
+        "recall": 0.8098862979379456
+      },
+      "heavy": {
+        "n": 23369,
+        "recall": 0.28995678035003636
+      }
+    },
+    "by_illumination": {
+      "normal": {
+        "n": 36832,
+        "recall": 0.5019276715899218
+      },
+      "extreme": {
+        "n": 2280,
+        "recall": 0.6535087719298246
+      }
+    },
+    "by_occlusion": {
+      "none": {
+        "n": 23428,
+        "recall": 0.6864008878265323
+      },
+      "partial": {
+        "n": 7097,
+        "recall": 0.307172044525856
+      },
+      "heavy": {
+        "n": 8587,
+        "recall": 0.199836962850821
+      }
+    },
+    "by_pose": {
+      "typical": {
+        "n": 37475,
+        "recall": 0.5112208138759172
+      },
+      "atypical": {
+        "n": 1637,
+        "recall": 0.5003054367745876
+      }
+    }
+  },
+  "buffalo_l d640 pad0.25": {
+    "config": "buffalo_l d640 pad0.25",
+    "pack": "buffalo_l",
+    "det_size": 640,
+    "pad_frac": 0.25,
+    "n_images": 3222,
+    "n_faces": 39112,
+    "recall_all": 0.41140826344855796,
+    "recall_useful_ge32px": 0.8612383509714105,
+    "n_useful": 12662,
+    "detections_per_image": 5.16852886405959,
+    "images_per_sec": 59.78432113511703,
+    "by_size": {
+      "tiny <16px": {
+        "n": 15266,
+        "recall": 0.024629896502030655
+      },
+      "small 16-32": {
+        "n": 11184,
+        "recall": 0.4300786838340486
+      },
+      "medium 32-64": {
+        "n": 7553,
+        "recall": 0.8137164040778498
+      },
+      "large 64-128": {
+        "n": 3191,
+        "recall": 0.9169539329363836
+      },
+      "huge >=128": {
+        "n": 1918,
+        "recall": 0.9556830031282586
+      }
+    },
+    "by_blur": {
+      "clear": {
+        "n": 5365,
+        "recall": 0.8753028890959925
+      },
+      "normal": {
+        "n": 10378,
+        "recall": 0.7027365581036809
+      },
+      "heavy": {
+        "n": 23369,
+        "recall": 0.17553168727801788
+      }
+    },
+    "by_illumination": {
+      "normal": {
+        "n": 36832,
+        "recall": 0.4047567332754127
+      },
+      "extreme": {
+        "n": 2280,
+        "recall": 0.518859649122807
+      }
+    },
+    "by_occlusion": {
+      "none": {
+        "n": 23428,
+        "recall": 0.5732030049513402
+      },
+      "partial": {
+        "n": 7097,
+        "recall": 0.20811610539664646
+      },
+      "heavy": {
+        "n": 8587,
+        "recall": 0.13799930126936066
+      }
+    },
+    "by_pose": {
+      "typical": {
+        "n": 37475,
+        "recall": 0.41118078719146095
+      },
+      "atypical": {
+        "n": 1637,
+        "recall": 0.4166157605375687
+      }
+    }
+  },
+  "buffalo_l d1024 pad0.00": {
+    "config": "buffalo_l d1024 pad0.00",
+    "pack": "buffalo_l",
+    "det_size": 1024,
+    "pad_frac": 0.0,
+    "n_images": 3222,
+    "n_faces": 39112,
+    "recall_all": 0.6406729392513807,
+    "recall_useful_ge32px": 0.8948033486021165,
+    "n_useful": 12662,
+    "detections_per_image": 8.128801986343886,
+    "images_per_sec": 33.333940830800444,
+    "by_size": {
+      "tiny <16px": {
+        "n": 15266,
+        "recall": 0.3507795100222717
+      },
+      "small 16-32": {
+        "n": 11184,
+        "recall": 0.7486587982832618
+      },
+      "medium 32-64": {
+        "n": 7553,
+        "recall": 0.8725009929829207
+      },
+      "large 64-128": {
+        "n": 3191,
+        "recall": 0.9398307740520213
+      },
+      "huge >=128": {
+        "n": 1918,
+        "recall": 0.9077163712200208
+      }
+    },
+    "by_blur": {
+      "clear": {
+        "n": 5365,
+        "recall": 0.8926374650512582
+      },
+      "normal": {
+        "n": 10378,
+        "recall": 0.8938138369628059
+      },
+      "heavy": {
+        "n": 23369,
+        "recall": 0.47040951688133853
+      }
+    },
+    "by_illumination": {
+      "normal": {
+        "n": 36832,
+        "recall": 0.632629235447437
+      },
+      "extreme": {
+        "n": 2280,
+        "recall": 0.7706140350877193
+      }
+    },
+    "by_occlusion": {
+      "none": {
+        "n": 23428,
+        "recall": 0.8054037903363497
+      },
+      "partial": {
+        "n": 7097,
+        "recall": 0.49429336339298297
+      },
+      "heavy": {
+        "n": 8587,
+        "recall": 0.3122161406777687
+      }
+    },
+    "by_pose": {
+      "typical": {
+        "n": 37475,
+        "recall": 0.6430153435623749
+      },
+      "atypical": {
+        "n": 1637,
+        "recall": 0.5870494807574832
+      }
+    }
+  },
+  "buffalo_l d1024 pad0.25": {
+    "config": "buffalo_l d1024 pad0.25",
+    "pack": "buffalo_l",
+    "det_size": 1024,
+    "pad_frac": 0.25,
+    "n_images": 3222,
+    "n_faces": 39112,
+    "recall_all": 0.5619502965841685,
+    "recall_useful_ge32px": 0.8935397251619017,
+    "n_useful": 12662,
+    "detections_per_image": 7.119490999379267,
+    "images_per_sec": 30.562333973514058,
+    "by_size": {
+      "tiny <16px": {
+        "n": 15266,
+        "recall": 0.1949430106118171
+      },
+      "small 16-32": {
+        "n": 11184,
+        "recall": 0.6875
+      },
+      "medium 32-64": {
+        "n": 7553,
+        "recall": 0.8649543227856481
+      },
+      "large 64-128": {
+        "n": 3191,
+        "recall": 0.9304293324976496
+      },
+      "huge >=128": {
+        "n": 1918,
+        "recall": 0.9447340980187695
+      }
+    },
+    "by_blur": {
+      "clear": {
+        "n": 5365,
+        "recall": 0.8956197576887233
+      },
+      "normal": {
+        "n": 10378,
+        "recall": 0.8498747350163808
+      },
+      "heavy": {
+        "n": 23369,
+        "recall": 0.35748213445162397
+      }
+    },
+    "by_illumination": {
+      "normal": {
+        "n": 36832,
+        "recall": 0.552997393570808
+      },
+      "extreme": {
+        "n": 2280,
+        "recall": 0.7065789473684211
+      }
+    },
+    "by_occlusion": {
+      "none": {
+        "n": 23428,
+        "recall": 0.7371521256616015
+      },
+      "partial": {
+        "n": 7097,
+        "recall": 0.3728335916584472
+      },
+      "heavy": {
+        "n": 8587,
+        "recall": 0.24024688482589962
+      }
+    },
+    "by_pose": {
+      "typical": {
+        "n": 37475,
+        "recall": 0.563282188125417
+      },
+      "atypical": {
+        "n": 1637,
+        "recall": 0.531459987782529
+      }
+    }
+  },
+  "antelopev2 d1024 pad0.00": {
+    "config": "antelopev2 d1024 pad0.00",
+    "pack": "antelopev2",
+    "det_size": 1024,
+    "pad_frac": 0.0,
+    "n_images": 3222,
+    "n_faces": 39112,
+    "recall_all": 0.6406729392513807,
+    "recall_useful_ge32px": 0.8948033486021165,
+    "n_useful": 12662,
+    "detections_per_image": 8.128801986343886,
+    "images_per_sec": 32.25015540050521,
+    "by_size": {
+      "tiny <16px": {
+        "n": 15266,
+        "recall": 0.3507795100222717
+      },
+      "small 16-32": {
+        "n": 11184,
+        "recall": 0.7486587982832618
+      },
+      "medium 32-64": {
+        "n": 7553,
+        "recall": 0.8725009929829207
+      },
+      "large 64-128": {
+        "n": 3191,
+        "recall": 0.9398307740520213
+      },
+      "huge >=128": {
+        "n": 1918,
+        "recall": 0.9077163712200208
+      }
+    },
+    "by_blur": {
+      "clear": {
+        "n": 5365,
+        "recall": 0.8926374650512582
+      },
+      "normal": {
+        "n": 10378,
+        "recall": 0.8938138369628059
+      },
+      "heavy": {
+        "n": 23369,
+        "recall": 0.47040951688133853
+      }
+    },
+    "by_illumination": {
+      "normal": {
+        "n": 36832,
+        "recall": 0.632629235447437
+      },
+      "extreme": {
+        "n": 2280,
+        "recall": 0.7706140350877193
+      }
+    },
+    "by_occlusion": {
+      "none": {
+        "n": 23428,
+        "recall": 0.8054037903363497
+      },
+      "partial": {
+        "n": 7097,
+        "recall": 0.49429336339298297
+      },
+      "heavy": {
+        "n": 8587,
+        "recall": 0.3122161406777687
+      }
+    },
+    "by_pose": {
+      "typical": {
+        "n": 37475,
+        "recall": 0.6430153435623749
+      },
+      "atypical": {
+        "n": 1637,
+        "recall": 0.5870494807574832
+      }
+    }
+  }
+}

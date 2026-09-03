@@ -6,10 +6,11 @@ detectors:
   scrfd_10g:
     backend: insightface
     pack: buffalo_l
-    det_size: 640
-    # Padding is REQUIRED for tight portrait crops. Measured on SCUT-FBP5500:
-    # pad=0.00 -> 46% recall, pad=0.25 -> 100% recall. See docs/RESEARCH.md 2.1.
-    pad_frac: 0.25
+    # Both adaptive - see configs/pipeline/align.yaml for the measurements. A single
+    # fixed setting fails one of the two regimes badly: the best scene config (d1024,
+    # unpadded) has ZERO recall on tight portrait crops.
+    det_size: auto      # <=700px longest side -> 640, else 1024
+    pad_frac: auto      # unpadded first, padded retry on empty/frame-filling
     license: research-only
     commercial_use: false
   yunet:

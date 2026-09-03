@@ -64,6 +64,8 @@ All processing is local. No image, crop, embedding or prediction leaves the mach
 
 | [`e11_fairness`](experiments/e11_fairness/FINDINGS.md) | Where does demographic bias actually enter? | **Not at detection** (recall spread 0.0006 across 7 balanced groups) — it enters late and hard. On a *balanced* set the system puts White faces in its top-100 at **2.2× their share** and Southeast Asian faces at **0.23×**. Gender accuracy spread 0.174; age error varies 5× more by age than by race. The photo-quality confound was tested and **not supported** (R² = 0.017) — though styling remains untested. |
 
+| [`e8_detection`](experiments/e8_detection/FINDINGS.md) | What does the detector miss in real scenes? | Recall **0.895** on faces ≥32px (0.641 overall on a set whose median face is 20px). Occlusion and blur dominate (0.312 / 0.470); pose barely matters. **The config that won this experiment's own sweep has 0.0000 recall on cropped portraits** — InsightFace upscales small images past SCRFD's range. Both axes are now adaptive, which is strictly dominant on both regimes. |
+
 **What E7 changed.** Ranking works well enough to build on, so the project proceeds — but
 with a narrower scope than the brief assumed: absolute thresholds like "attractiveness above
 4.0" are not supportable across domains and are replaced by percentile-within-collection;

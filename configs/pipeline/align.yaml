@@ -21,6 +21,22 @@ border_value: 0
 # Revisit if the fusion is ever dropped.
 align: template    # template | bbox
 
-# Detection padding, separate from crop margin. Required for tight portrait crops:
-# SCRFD recall on frame-filling faces is 46% unpadded, 100% at pad 0.25.
-detect_pad_frac: 0.25
+# Detection scale and padding. Both are ADAPTIVE, because E5 and E8 measured opposite
+# requirements in the two regimes and a single fixed setting fails one of them badly.
+#
+# det_size: InsightFace resizes so the longest side equals det_size, so small images get
+#   UPSCALED. E8 measured that a 350px portrait at det_size 1024 is blown up ~3x and
+#   recall collapses to 0.36 - and to 0.00 unpadded. Scenes meanwhile want 1024
+#   (recall_all 0.641 vs 0.511 at 640) because their faces are tiny. "auto" routes per
+#   image: <=700px longest side -> 640, else 1024.
+#
+# pad_frac: E5 found portrait recall collapses to 46% unpadded. E8 found padding costs
+#   -0.156 recall on faces under 16px in scenes. "auto" runs unpadded first and retries
+#   padded only when nothing was found or the top face fills the frame.
+#
+# Measured on both regimes (portrait recall / scene recall_all / scene recall>=32px):
+#   d640  pad0.25   0.9975 / 0.3916 / 0.8570      <- E5 setting, poor on scenes
+#   d1024 pad0.00   0.0000 / 0.6580 / 0.8964      <- E8 sweep winner, BLIND to portraits
+#   auto  auto      0.9975 / 0.6588 / 0.8995      <- strictly dominant
+detect_det_size: auto
+detect_pad_frac: auto

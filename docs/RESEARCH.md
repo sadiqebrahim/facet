@@ -419,6 +419,15 @@ small, blurred, profile and partially-occluded faces determines what the user ca
 missed face is invisible in the UI — there is no score to inspect. This makes detection recall a
 *product* metric, and it is why §14 E8 evaluates the detector separately rather than assuming it.
 
+> **E8 results.** On WIDER FACE (median face 20 px): recall **0.895** on faces ≥32 px, **0.641**
+> overall. Occlusion and blur dominate — heavy occlusion **0.312**, heavy blur **0.470** — while
+> pose costs surprisingly little (0.643 → 0.587). And a warning about single-regime tuning: the
+> configuration that won E8's own scene sweep (det 1024, unpadded) detects **zero** faces in
+> tight portrait crops, because InsightFace upscales small images past SCRFD's scale range.
+> E5's portrait setting is in turn poor on scenes (0.392 recall_all). Both axes are now
+> **adaptive** — `det_size="auto"`, `pad_frac="auto"` — which is strictly dominant on both
+> regimes (0.9975 portrait / 0.6588 scene). See `experiments/e8_detection/FINDINGS.md`.
+
 ### 2.2 Face alignment / landmarks
 
 | Model | Points | Speed | Available | Purpose here |
@@ -1622,7 +1631,7 @@ absolute ratings, and it plugs straight into the Bradley–Terry machinery from 
 | **5 ✅** | **E7 cross-dataset** | ✅ **conditional pass**: ranking transfers (ρ 0.61, 72 % of within-dataset), absolute scores and cross-group calibration do not |
 | **6 ◑** | E4, E9, E12 — age/gender/quality/uncertainty selected | ✅ E12: conformal achieves nominal coverage in-domain (0.90) but only 0.43–0.78 under domain shift → per-collection calibration + OOD gating required. E4/E9 open |
 | **7 ✅** | E11 fairness audit | ✅ done: detection clean (0.0006 spread); attractiveness severe (top-100 skew 2.2×/4.3×). Published in §13.5, not buried |
-| **8** | Inference pipeline + incremental indexer | Indexes 100 k images without re-doing work |
+| **8 ◑** | Inference pipeline + incremental indexer | Detector settled (E8, adaptive both axes); detection cache keyed on model version. Indexer itself still to build |
 | **9** | Query + ranking engine | Brief's example queries work |
 | **10** | API | Stable contract, versioned |
 | **11** | UI | Phase-11 feature list |

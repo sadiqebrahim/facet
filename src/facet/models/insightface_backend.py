@@ -104,52 +104,69 @@ class InsightFaceDetector:
     def __init__(
         self,
         pack: str = "buffalo_l",
-        det_size: int = 640,
+        det_size: int | str = "auto",
         use_gpu: bool = True,
-        pad_frac: float = 0.25,
+        pad_frac: float | str = "auto",
     ):
-        """`pad_frac` replicate-pads the image before detection.
+        """SCRFD detector with scale- and padding-adaptive behaviour.
 
-        This is not cosmetic. SCRFD is trained on WIDER FACE, where faces occupy a small
-        fraction of the frame. On tight pre-cropped portraits - avatars, ID photos, and
-        every image in SCUT-FBP5500 - a face filling the frame is OUT of the detector's
-        training distribution and recall collapses. Measured on 149 SCUT-FBP5500 images:
+        Two independent adaptations, both forced by measurement rather than taste:
 
-            det_size=640, pad=0.00  ->  46% recall
-            det_size=640, pad=0.25  -> 100% recall
-            det_size=320, pad=0.00  -> 100% recall
+        **det_size.** InsightFace resizes every image so its longest side equals det_size,
+        which means a small image gets UPSCALED. E8 found this silently destroys the
+        portrait case: a 350x350 portrait at det_size 1024 is blown up ~3x, the face
+        exceeds the detector's scale range, and recall on SCUT-FBP5500 crops falls from
+        1.00 (det 640) to 0.36 (det 1024) - to 0.00 unpadded. Meanwhile scenes clearly
+        prefer 1024 (recall_all 0.641 vs 0.511 at 640) because their faces are tiny.
+        `det_size="auto"` keeps a detector at each scale and routes per image so small
+        images are never upscaled hard.
 
-        Padding is preferred over shrinking det_size because it keeps small faces in
-        large group photos detectable, which matters for the real directory-scanning
-        workload. See docs/RESEARCH.md section 2.1.
+        **pad_frac.** E5 found SCRFD's recall on frame-filling portraits collapses to 46%
+        without padding. E8 found padding is not free on scenes - at det 1024 it helps
+        only the >=128px bucket (+0.037) and costs -0.156 on faces under 16px.
+        `pad_frac="auto"` runs unpadded first and retries padded only when nothing was
+        found or the top face fills the frame, which recovers portraits at near-zero cost
+        on scenes (measured: recall_all 0.6588 auto vs 0.6580 unpadded vs 0.5725 padded).
         """
         if use_gpu:
             ensure_cuda_libs()
         from insightface.app import FaceAnalysis
 
         self.pad_frac = pad_frac
-        self.version = f"insightface:{pack}:pad{pad_frac:g}:det{det_size}"
-        self.app = FaceAnalysis(
-            name=pack,
-            allowed_modules=["detection"],
-            providers=(
-                ["CUDAExecutionProvider", "CPUExecutionProvider"]
-                if use_gpu
-                else ["CPUExecutionProvider"]
-            ),
+        self.auto_pad = pad_frac == "auto"
+        self.retry_pad = 0.25
+        self.auto_scale = det_size == "auto"
+        #: image longest-side threshold -> det_size to use for it
+        self.scales = (640, 1024) if self.auto_scale else (int(det_size),)
+        providers = (
+            ["CUDAExecutionProvider", "CPUExecutionProvider"] if use_gpu
+            else ["CPUExecutionProvider"]
         )
-        self.app.prepare(ctx_id=0 if use_gpu else -1, det_size=(det_size, det_size))
+        self.apps = {}
+        for s in self.scales:
+            app = FaceAnalysis(name=pack, allowed_modules=["detection"], providers=providers)
+            app.prepare(ctx_id=0 if use_gpu else -1, det_size=(s, s))
+            self.apps[s] = app
+        self.app = self.apps[self.scales[-1]]
+        tag_p = "auto" if self.auto_pad else f"{pad_frac:g}"
+        tag_s = "auto" if self.auto_scale else str(det_size)
+        self.version = f"insightface:{pack}:pad{tag_p}:det{tag_s}"
 
-    def detect(self, image: np.ndarray) -> list[Detection]:
-        """`image` is BGR uint8, as OpenCV reads it. Coordinates are in ORIGINAL space."""
-        pad = int(round(min(image.shape[:2]) * self.pad_frac)) if self.pad_frac > 0 else 0
-        if pad:
-            padded = cv2.copyMakeBorder(image, pad, pad, pad, pad, cv2.BORDER_REPLICATE)
-        else:
-            padded = image
+    def _app_for(self, image: np.ndarray):
+        """Pick a det_size that does not upscale a small image beyond the detector's range."""
+        if not self.auto_scale:
+            return self.apps[self.scales[0]]
+        longest = max(image.shape[:2])
+        return self.apps[640] if longest <= 700 else self.apps[1024]
 
+    def _detect_at(self, image: np.ndarray, pad_frac: float) -> list[Detection]:
+        pad = int(round(min(image.shape[:2]) * pad_frac)) if pad_frac > 0 else 0
+        padded = (
+            cv2.copyMakeBorder(image, pad, pad, pad, pad, cv2.BORDER_REPLICATE)
+            if pad else image
+        )
         out = []
-        for f in self.app.get(padded):
+        for f in self._app_for(image).get(padded):
             x1, y1, x2, y2 = [float(v) for v in f.bbox]
             kps = np.asarray(f.kps, dtype=np.float32).copy()
             if pad:  # map back to original image coordinates
@@ -159,6 +176,30 @@ class InsightFaceDetector:
                 Detection(bbox=(x1, y1, x2, y2), score=float(f.det_score), keypoints=kps)
             )
         return sorted(out, key=lambda d: -d.score)
+
+    def _fills_frame(self, dets: list[Detection], image: np.ndarray, frac: float = 0.6) -> bool:
+        if not dets:
+            return False
+        h, w = image.shape[:2]
+        x1, y1, x2, y2 = dets[0].bbox
+        return max(x2 - x1, y2 - y1) >= frac * min(h, w)
+
+    def detect(self, image: np.ndarray) -> list[Detection]:
+        """`image` is BGR uint8, as OpenCV reads it. Coordinates are in ORIGINAL space."""
+        if not self.auto_pad:
+            return self._detect_at(image, float(self.pad_frac))
+
+        # Unpadded first: best for scenes, which is the common case when scanning a
+        # directory of photographs.
+        dets = self._detect_at(image, 0.0)
+        # Retry padded only in the two situations where padding is known to help:
+        # nothing was found at all, or the top face fills the frame (the portrait case
+        # where SCRFD's recall collapses - E5 measured 46% unpadded on such crops).
+        if not dets or self._fills_frame(dets, image):
+            retry = self._detect_at(image, self.retry_pad)
+            if len(retry) > len(dets) or (retry and not dets):
+                return retry
+        return dets
 
 
 class ArcFaceEmbedder:

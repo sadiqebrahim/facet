@@ -43,7 +43,12 @@ def detect_all(ds, names: list[str], dataset: str, use_gpu: bool, cache_dir: Pat
     experiment E5 cheap instead of quadratic in the number of configurations.
     """
     cache_dir.mkdir(parents=True, exist_ok=True)
-    cache = cache_dir / f"{dataset}__buffalo_l.npz"
+    # The cache key MUST include the detector version. It previously did not, so changing
+    # the detector configuration would silently reuse stale boxes - a cache that returns
+    # confidently wrong data is worse than no cache.
+    detector = InsightFaceDetector(pack="buffalo_l", use_gpu=use_gpu)
+    tag = detector.version.replace(":", "_").replace("/", "_")
+    cache = cache_dir / f"{dataset}__{tag}.npz"
     if cache.exists():
         z = np.load(cache, allow_pickle=True)
         if list(z["names"]) == list(names):
@@ -51,7 +56,6 @@ def detect_all(ds, names: list[str], dataset: str, use_gpu: bool, cache_dir: Pat
             return z["bboxes"], z["kps"], z["scores"]
         print("  [cache] stale (name list changed), re-detecting")
 
-    detector = InsightFaceDetector(pack="buffalo_l", use_gpu=use_gpu)
     bboxes = np.zeros((len(names), 4), dtype=np.float32)
     kps = np.full((len(names), 5, 2), np.nan, dtype=np.float32)
     scores = np.zeros(len(names), dtype=np.float32)
