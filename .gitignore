@@ -1,0 +1,28 @@
+# Datasets and model weights are NEVER committed. SCUT-FBP5500 is non-commercial research
+# only and redistribution is prohibited - see docs/LICENSING.md. The repo ships download
+# scripts, never data.
+# NOTE: these are anchored with a leading slash so they match only the top-level
+# directories, not source packages such as src/facet/data/.
+/data/
+/artifacts/
+/.cache/
+
+*.onnx
+*.pth
+*.pt
+*.caffemodel
+*.xlsx
+*.zip
+
+# Experiment outputs: results.json, manifest.json and FINDINGS.md ARE committed - they are
+# the experimental record. Large per-run binaries are not.
+experiments/**/checkpoints/
+experiments/**/*.npy
+
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+*.egg-info/
+.pytest_cache/
+.DS_Store

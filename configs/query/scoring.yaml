@@ -1,0 +1,39 @@
+# Ranking configuration (docs/RESEARCH.md section 9.3).
+# Weights and membership-function shapes live here, never in source.
+
+hard_filters:
+  min_quality: 0.4
+  min_face_pixels: 80
+  min_detector_confidence: 0.5
+
+preferences:
+  age:
+    weight: 0.30
+    # Trapezoidal membership with soft shoulders, so 36 does not fall off a cliff when
+    # the user asked for 25-35. Shoulder width scales with the face's own predicted age
+    # uncertainty: a face at 35 +/- 9 should not match as strongly as one at 35 +/- 2.
+    shoulder_years: 5
+    scale_shoulder_by_uncertainty: true
+  gender:
+    weight: 0.20
+    # Soft by default. A hard filter on a 98%-accurate classifier silently discards
+    # true matches, biased toward the groups where the classifier is weakest.
+    mode: soft
+    min_confidence: 0.6
+    report_excluded_uncertain: true
+  attractiveness:
+    weight: 0.50
+    # P(rating >= threshold) from the distribution head, NOT a thresholded mean:
+    # it accounts for the model's own predicted spread.
+    target: p_ge_threshold
+    threshold: 4.0
+
+# Each criterion's match is multiplied by its confidence before weighting, so an
+# uncertain criterion contributes little in either direction rather than contributing a
+# confident-looking wrong answer. Each term is also a row in the "why this result" panel.
+confidence_weighting: true
+
+ranking:
+  sort_by: relevance      # relevance | attractiveness | confidence | age_match | quality
+  limit: 100
+  page_size: 50

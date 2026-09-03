@@ -1,0 +1,82 @@
+{
+  "experiment": "e1_identity_audit",
+  "description": "Are SCUT-FBP5500's official splits subject-disjoint?",
+  "config": {
+    "data_root": "/home/dhruv/sadiq/facet/data/raw/SCUT-FBP5500_v2",
+    "features": "arcface_antelopev2__m0__s112",
+    "threshold": 0.5,
+    "out_dir": "/home/dhruv/sadiq/facet/experiments/e1_identity_audit"
+  },
+  "seed": 1337,
+  "dataset": "SCUT-FBP5500_v2",
+  "dataset_version": "",
+  "split_methodology": "official splits, audited for identity leakage",
+  "metrics": {
+    "n_images": 5500,
+    "features": "arcface_antelopev2__m0__s112",
+    "threshold": 0.5,
+    "similarity_percentiles": {
+      "50": 0.011908356100320816,
+      "90": 0.11402180790901184,
+      "99": 0.21471518278121948,
+      "99.9": 0.29512670636177063,
+      "99.99": 0.36241522431373596
+    },
+    "max_similarity": 0.9976342916488647,
+    "n_pairs_above_threshold": 172,
+    "n_clusters": 5332,
+    "n_multi_image_clusters": 164,
+    "largest_cluster": 3,
+    "n_images_in_multi_clusters": 332,
+    "per_split": {
+      "cv1": {
+        "straddling_clusters": 57,
+        "leaked_test_images": 58,
+        "leaked_test_fraction": 0.05273
+      },
+      "cv2": {
+        "straddling_clusters": 51,
+        "leaked_test_images": 51,
+        "leaked_test_fraction": 0.04636
+      },
+      "cv3": {
+        "straddling_clusters": 59,
+        "leaked_test_images": 59,
+        "leaked_test_fraction": 0.05364
+      },
+      "cv4": {
+        "straddling_clusters": 52,
+        "leaked_test_images": 53,
+        "leaked_test_fraction": 0.04818
+      },
+      "cv5": {
+        "straddling_clusters": 55,
+        "leaked_test_images": 55,
+        "leaked_test_fraction": 0.05
+      },
+      "split6040": {
+        "straddling_clusters": 83,
+        "leaked_test_images": 87,
+        "leaked_test_fraction": 0.03955
+      }
+    },
+    "verdict": "LEAKAGE - up to 5.36% of test images share an identity with training"
+  },
+  "artifacts": {},
+  "notes": [],
+  "started_at": "2026-09-03T08:59:11",
+  "duration_sec": 5.63,
+  "hardware": {
+    "gpu": "NVIDIA RTX A6000, 49140 MiB",
+    "cpu": "x86_64",
+    "platform": "Linux-6.8.0-106-generic-x86_64-with-glibc2.35"
+  },
+  "software": {
+    "python": "3.11.15",
+    "numpy": "2.4.6",
+    "sklearn": "1.9.0",
+    "onnxruntime": "1.22.0",
+    "torch": "2.11.0+cu128"
+  },
+  "config_hash": "5937a9a5c6f866eb"
+}

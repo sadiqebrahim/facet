@@ -1,0 +1,98 @@
+{
+  "experiment": "exp001_frozen_linear_probe",
+  "description": "Frozen pretrained representations + linear heads on SCUT-FBP5500, evaluated on the dataset's own official splits. Answers E2 in docs/RESEARCH.md.",
+  "config": {
+    "data_root": "/home/dhruv/sadiq/facet/data/raw/SCUT-FBP5500_v2",
+    "out_dir": "/home/dhruv/sadiq/facet/experiments/exp001_frozen_linear_probe",
+    "margin": 0.0,
+    "size": 112,
+    "reps": [
+      "geometry",
+      "clip",
+      "arcface_buffalo_l",
+      "arcface_antelopev2",
+      "arcface_r50+geometry",
+      "arcface_r50+clip",
+      "arcface_r50+r100",
+      "all"
+    ],
+    "splits": [
+      "cv1",
+      "cv2",
+      "cv3",
+      "cv4",
+      "cv5",
+      "split6040"
+    ],
+    "seed": 1337
+  },
+  "seed": 1337,
+  "dataset": "SCUT-FBP5500_v2",
+  "dataset_version": "v2 (authors' Google Drive release, 2018-05-11)",
+  "split_methodology": "Official 5-fold CV and official 60/40 split, as shipped with the dataset. NOTE: these are random IMAGE splits; subject-disjointness is UNVERIFIED (experiment E1). Treat all numbers as provisional.",
+  "metrics": {
+    "geometry": {
+      "cv_mean_pc_ridge": 0.6818914958016956,
+      "cv_mean_pc_ldl": 0.6935887944234719,
+      "split6040_pc_ridge": 0.6768634835036432
+    },
+    "clip": {
+      "cv_mean_pc_ridge": 0.9278531828292549,
+      "cv_mean_pc_ldl": 0.930175231725449,
+      "split6040_pc_ridge": 0.9240596779098442
+    },
+    "arcface_buffalo_l": {
+      "cv_mean_pc_ridge": 0.8267735332974082,
+      "cv_mean_pc_ldl": 0.8449892206774823,
+      "split6040_pc_ridge": 0.828169747935395
+    },
+    "arcface_antelopev2": {
+      "cv_mean_pc_ridge": 0.8712385139006174,
+      "cv_mean_pc_ldl": 0.8825802831081464,
+      "split6040_pc_ridge": 0.8673898903939646
+    },
+    "arcface_r50+geometry": {
+      "cv_mean_pc_ridge": 0.8506960739078918,
+      "cv_mean_pc_ldl": 0.8726959527970788,
+      "split6040_pc_ridge": 0.8573957819250161
+    },
+    "arcface_r50+clip": {
+      "cv_mean_pc_ridge": 0.9397576865408045,
+      "cv_mean_pc_ldl": 0.942219141118407,
+      "split6040_pc_ridge": 0.9371310001052268
+    },
+    "arcface_r50+r100": {
+      "cv_mean_pc_ridge": 0.8812771903901157,
+      "cv_mean_pc_ldl": 0.889592126022454,
+      "split6040_pc_ridge": 0.8706199694918741
+    },
+    "all": {
+      "cv_mean_pc_ridge": 0.9418724631296648,
+      "cv_mean_pc_ldl": 0.9439538733732565,
+      "split6040_pc_ridge": 0.9379477192982943
+    }
+  },
+  "artifacts": {
+    "results": "/home/dhruv/sadiq/facet/experiments/exp001_frozen_linear_probe/results.json"
+  },
+  "notes": [
+    "Reference (verified, arXiv:1801.06345): 5-fold PC AlexNet 0.8634 / ResNet-18 0.8900 / ResNeXt-50 0.8997; 60-40 PC 0.8298 / 0.8513 / 0.8777.",
+    "Human inter-rater correlation on this dataset is ~0.770-0.785. Model correlations above that are NOT superhuman perception - the crowd mean is a low-variance target.",
+    "Official splits are random image splits; subject-disjointness unverified (E1)."
+  ],
+  "started_at": "2026-09-02T16:35:01",
+  "duration_sec": 766.48,
+  "hardware": {
+    "gpu": "NVIDIA RTX A6000, 49140 MiB",
+    "cpu": "x86_64",
+    "platform": "Linux-6.8.0-106-generic-x86_64-with-glibc2.35"
+  },
+  "software": {
+    "python": "3.11.15",
+    "numpy": "2.4.6",
+    "sklearn": "1.9.0",
+    "onnxruntime": "1.22.0",
+    "torch": "2.11.0+cu128"
+  },
+  "config_hash": "3864f8e43819ef64"
+}

@@ -1,0 +1,76 @@
+# Model registry. Every entry carries its license so a --commercial-safe run can
+# mechanically exclude non-compliant components (docs/LICENSING.md section 3).
+# Nothing in the codebase hard-codes a model path.
+
+detectors:
+  scrfd_10g:
+    backend: insightface
+    pack: buffalo_l
+    det_size: 640
+    # Padding is REQUIRED for tight portrait crops. Measured on SCUT-FBP5500:
+    # pad=0.00 -> 46% recall, pad=0.25 -> 100% recall. See docs/RESEARCH.md 2.1.
+    pad_frac: 0.25
+    license: research-only
+    commercial_use: false
+  yunet:
+    backend: opencv_zoo
+    license: Apache-2.0
+    commercial_use: true
+    note: commercially-clean fallback and CPU path; not yet implemented
+
+encoders:
+  arcface_r50:
+    backend: insightface
+    pack: buffalo_l
+    file: w600k_r50.onnx
+    dim: 512
+    license: research-only
+    commercial_use: false
+  arcface_r100:
+    backend: insightface
+    pack: antelopev2
+    file: glintr100.onnx
+    dim: 512
+    license: research-only
+    commercial_use: false
+  clip_vit_b32:
+    backend: huggingface
+    model_id: openai/clip-vit-base-patch32
+    dim: 512
+    license: MIT
+    commercial_use: true
+  geometry_procrustes86:
+    backend: internal
+    dim: 178
+    license: n/a
+    commercial_use: true
+    note: uses SCUT-FBP5500's supplied landmarks; a landmark model is needed at inference
+
+attributes:
+  age_gender_mivolo:
+    backend: mivolo
+    license: Apache-2.0
+    commercial_use: true
+    status: not-yet-acquired
+    warning: >
+      MiVOLO's own weights are Apache-2.0, but its bundled detector is Ultralytics
+      YOLOv8 (AGPL-3.0). Use MiVOLO's age/gender head with our SCRFD detector and do
+      not introduce the AGPL dependency.
+  age_gender_insightface:
+    backend: insightface
+    pack: buffalo_l
+    file: genderage.onnx
+    license: research-only
+    commercial_use: false
+
+beauty:
+  ridge_ldl_arcface_r50:
+    encoder: arcface_r50
+    head: ridge_ldl
+    trained_on: SCUT-FBP5500
+    # A model trained on non-commercial data inherits that restriction.
+    license: research-only (inherited from training data)
+    commercial_use: false
+    source_of_truth: >
+      Predicted rating on the SCUT-FBP5500 scale, as defined by 60 volunteer raters
+      aged 18-27 (mean 21.6) in 2017. This is NOT a measurement of beauty.

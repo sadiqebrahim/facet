@@ -1,0 +1,9 @@
+# Crop protocol. VERSIONED: cached features are keyed on these values, so changing any
+# of them correctly invalidates the feature cache rather than silently mixing
+# incompatible features (docs/RESEARCH.md section 2.2).
+version: v1
+template: arcface_5point
+output_size: 112
+margin: 0.0        # experiment E5 sweeps this: 0.0, 0.1, 0.25, 0.4
+interpolation: linear
+border_value: 0
