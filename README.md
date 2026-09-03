@@ -74,10 +74,22 @@ of a result set means no single population ranking can be the honest answer.
 Requires the SCUT-FBP5500 dataset (`make data`) and a CUDA GPU (CPU works, ~5× slower).
 
 ```bash
+conda env create -f environment.yml && conda activate facet
+
+make data       # download SCUT-FBP5500 (prompts for licence acceptance)
 make features   # detect, align, encode; cached and keyed by (encoder, crop protocol)
 make exp001     # frozen representation + linear probe on the official splits
 make test
+
+# MEBeauty (the cross-dataset test set) is fetched separately - see docs/DATASETS.md:
+#   git clone https://github.com/fbplab/MEBeauty-database
+python scripts/run_e7_cross_dataset.py
 ```
+
+`make` uses whatever `python` is on your PATH; override with `make PY=/path/to/python <target>`.
+
+**Neither dataset is redistributed here** — both are non-commercial research only and
+prohibit redistribution. The repo ships download scripts and pointers, never data.
 
 ## Repository layout
 

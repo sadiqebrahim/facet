@@ -1,4 +1,5 @@
-PY ?= /home/dhruv/miniconda3/envs/facet/bin/python
+# Override if your interpreter lives elsewhere:  make PY=/path/to/python exp001
+PY ?= python
 DATA ?= data/raw/SCUT-FBP5500_v2
 
 .PHONY: help data features exp001 test lint clean summary
