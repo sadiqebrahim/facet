@@ -45,6 +45,32 @@ def _session(path: Path, use_gpu: bool = True, strict_gpu: bool = True):
     return sess
 
 
+def crop_bbox(
+    image: np.ndarray, bbox: tuple[float, float, float, float], size: int = 112,
+    margin: float = 0.0
+) -> np.ndarray:
+    """Plain square bbox crop with margin - NO similarity transform.
+
+    The control condition for experiment E5: it isolates how much the 5-point alignment
+    is worth, separately from how much the crop framing is worth. Without alignment the
+    face keeps its in-plane rotation and its position within the frame varies.
+    """
+    x1, y1, x2, y2 = bbox
+    cx, cy = (x1 + x2) / 2.0, (y1 + y2) / 2.0
+    half = max(x2 - x1, y2 - y1) * (1.0 + margin) / 2.0
+    h, w = image.shape[:2]
+    xa, xb = int(round(cx - half)), int(round(cx + half))
+    ya, yb = int(round(cy - half)), int(round(cy + half))
+    pad = max(0, -xa, -ya, xb - w, yb - h)
+    if pad:
+        image = cv2.copyMakeBorder(image, pad, pad, pad, pad, cv2.BORDER_REPLICATE)
+        xa, xb, ya, yb = xa + pad, xb + pad, ya + pad, yb + pad
+    patch = image[ya:yb, xa:xb]
+    if patch.size == 0:
+        return np.zeros((size, size, 3), dtype=image.dtype)
+    return cv2.resize(patch, (size, size))
+
+
 def align_to_template(
     image: np.ndarray, keypoints: np.ndarray, size: int = 112, margin: float = 0.0
 ) -> np.ndarray:

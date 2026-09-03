@@ -1,9 +1,26 @@
 # Crop protocol. VERSIONED: cached features are keyed on these values, so changing any
 # of them correctly invalidates the feature cache rather than silently mixing
 # incompatible features (docs/RESEARCH.md section 2.2).
-version: v1
+#
+# v2 (E5): margin raised 0.00 -> 0.25. Measured on the production ArcFace+CLIP fusion:
+#   transfer to held-out MEBeauty  0.6084 -> 0.6418 Spearman  (+0.033, ~5% relative)
+#   in-benchmark SCUT 5-fold PC    0.9398 -> 0.9390           (-0.0008, negligible)
+# The two optima disagree - in-benchmark PC peaks at margin 0.00 - and E7 established
+# that transfer is the number that predicts whether the product works on real images.
+# See experiments/e5_crop_sensitivity/FINDINGS.md.
+version: v2
 template: arcface_5point
 output_size: 112
-margin: 0.0        # experiment E5 sweeps this: 0.0, 0.1, 0.25, 0.4
+margin: 0.25       # E5 swept 0.00 / 0.10 / 0.25 / 0.40
 interpolation: linear
 border_value: 0
+
+# Alignment: the ArcFace 5-point similarity transform. E5 found this is worth +0.023
+# transfer for the fusion - real but much smaller than folklore suggests - and is
+# actively HARMFUL for ArcFace alone (-0.073), where a plain bbox crop transfers better.
+# Revisit if the fusion is ever dropped.
+align: template    # template | bbox
+
+# Detection padding, separate from crop margin. Required for tight portrait crops:
+# SCRFD recall on frame-filling faces is 46% unpadded, 100% at pad 0.25.
+detect_pad_frac: 0.25

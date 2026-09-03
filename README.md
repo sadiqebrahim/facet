@@ -53,6 +53,8 @@ All processing is local. No image, crop, embedding or prediction leaves the mach
 
 | [`e14_personalisation`](experiments/e14_personalisation/FINDINGS.md) | Can we learn an individual's taste, and at what label cost? | **Depends entirely on rater-pool diversity.** Seven SCUT raters rated all 5,500 images twice, giving a real ceiling: people agree with the crowd (ρ 0.766) *more than with their own earlier judgment* (ρ 0.575). The population model already sits at **95.5 % of the achievable maximum**, so on that homogeneous pool personalisation **hurts** at every budget. On diverse MEBeauty it helps — **+0.025 Spearman from 100 labels**, 68 % of users — and 5.4× more for users the consensus fits worst. |
 
+| [`e5_crop_sensitivity`](experiments/e5_crop_sensitivity/FINDINGS.md) | Does the crop protocol matter more than the backbone? | **No — my prior was wrong.** Backbone choice spans 4–10× more than crop margin. But margin matters *hugely for ArcFace alone* (transfer +61 % relative), and the in-benchmark and transfer optima **disagree** — so the production margin moved 0.00 → **0.25**, worth +0.033 transfer ρ for free. |
+
 **What E7 changed.** Ranking works well enough to build on, so the project proceeds — but
 with a narrower scope than the brief assumed: absolute thresholds like "attractiveness above
 4.0" are not supportable across domains and are replaced by percentile-within-collection;

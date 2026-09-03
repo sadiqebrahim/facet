@@ -1,0 +1,173 @@
+{
+  "experiment": "e5_crop_sensitivity",
+  "description": "Does the crop protocol matter more than the backbone?",
+  "config": {
+    "scut_root": "/home/dhruv/sadiq/facet/data/raw/SCUT-FBP5500_v2",
+    "me_root": "/home/dhruv/sadiq/facet/data/raw/MEBeauty",
+    "out_dir": "/home/dhruv/sadiq/facet/experiments/e5_crop_sensitivity"
+  },
+  "seed": 1337,
+  "dataset": "SCUT-FBP5500_v2 (+ MEBeauty for transfer)",
+  "dataset_version": "",
+  "split_methodology": "In-benchmark: SCUT official 5-fold CV. Transfer: train on all 5500 SCUT, test on all 2520 held-out MEBeauty (rank metrics only - scales differ).",
+  "metrics": {
+    "arcface_r50": {
+      "m0.00 template": {
+        "margin": 0.0,
+        "align": "template",
+        "cv_pc": 0.8267735325143324,
+        "cv_pc_std": 0.005800049624941632,
+        "cv_mae": 0.30208650834342327,
+        "transfer_spearman": 0.20304364279170756,
+        "transfer_pairwise": 0.567290108271415
+      },
+      "m0.10 template": {
+        "margin": 0.1,
+        "align": "template",
+        "cv_pc": 0.8336937207706849,
+        "cv_pc_std": 0.00448242420568476,
+        "cv_mae": 0.29700186031886167,
+        "transfer_spearman": 0.20800495191586274,
+        "transfer_pairwise": 0.5697551492802782
+      },
+      "m0.25 template": {
+        "margin": 0.25,
+        "align": "template",
+        "cv_pc": 0.8514869471014584,
+        "cv_pc_std": 0.006176014678445811,
+        "cv_mae": 0.28097924626098003,
+        "transfer_spearman": 0.2637515322526311,
+        "transfer_pairwise": 0.5886387662770365
+      },
+      "m0.40 template": {
+        "margin": 0.4,
+        "align": "template",
+        "cv_pc": 0.8641402272305287,
+        "cv_pc_std": 0.008785386580823108,
+        "cv_mae": 0.27064727431007907,
+        "transfer_spearman": 0.32719596251501704,
+        "transfer_pairwise": 0.6104383464184256
+      },
+      "m0.25 bbox(no align)": {
+        "margin": 0.25,
+        "align": "bbox",
+        "cv_pc": 0.8536648005631632,
+        "cv_pc_std": 0.009786240117962265,
+        "cv_mae": 0.28053079973940864,
+        "transfer_spearman": 0.336429863672427,
+        "transfer_pairwise": 0.6137601394852473
+      }
+    },
+    "clip": {
+      "m0.00 template": {
+        "margin": 0.0,
+        "align": "template",
+        "cv_pc": 0.9278531831086024,
+        "cv_pc_std": 0.0033989382677536107,
+        "cv_mae": 0.19760857260312337,
+        "transfer_spearman": 0.593789024101458,
+        "transfer_pairwise": 0.7096311957954016
+      },
+      "m0.10 template": {
+        "margin": 0.1,
+        "align": "template",
+        "cv_pc": 0.9279541665271548,
+        "cv_pc_std": 0.004717090414724041,
+        "cv_mae": 0.19680203589423972,
+        "transfer_spearman": 0.6081352890783008,
+        "transfer_pairwise": 0.7151875585572496
+      },
+      "m0.25 template": {
+        "margin": 0.25,
+        "align": "template",
+        "cv_pc": 0.9274291268963859,
+        "cv_pc_std": 0.004381491775318698,
+        "cv_mae": 0.19790609560875744,
+        "transfer_spearman": 0.6240275799663028,
+        "transfer_pairwise": 0.7225175483864503
+      },
+      "m0.40 template": {
+        "margin": 0.4,
+        "align": "template",
+        "cv_pc": 0.9255046269534809,
+        "cv_pc_std": 0.004332929026769799,
+        "cv_mae": 0.20021515441975293,
+        "transfer_spearman": 0.6223164100516949,
+        "transfer_pairwise": 0.7225375893702621
+      },
+      "m0.25 bbox(no align)": {
+        "margin": 0.25,
+        "align": "bbox",
+        "cv_pc": 0.9247901161319341,
+        "cv_pc_std": 0.003722595485360808,
+        "cv_mae": 0.20084917553335174,
+        "transfer_spearman": 0.6156114272354266,
+        "transfer_pairwise": 0.7196767389311142
+      }
+    },
+    "arcface_r50+clip": {
+      "m0.00 template": {
+        "margin": 0.0,
+        "align": "template",
+        "cv_pc": 0.9397576870487327,
+        "cv_pc_std": 0.0028434050493624827,
+        "cv_mae": 0.18234627380351015,
+        "transfer_spearman": 0.6084032022233475,
+        "transfer_pairwise": 0.7159290749582897
+      },
+      "m0.10 template": {
+        "margin": 0.1,
+        "align": "template",
+        "cv_pc": 0.9389189317771297,
+        "cv_pc_std": 0.00343095628279148,
+        "cv_mae": 0.18337193171034535,
+        "transfer_spearman": 0.6215153715913575,
+        "transfer_pairwise": 0.7201777635264115
+      },
+      "m0.25 template": {
+        "margin": 0.25,
+        "align": "template",
+        "cv_pc": 0.9390279115351408,
+        "cv_pc_std": 0.0035196850319164177,
+        "cv_mae": 0.18273546977378058,
+        "transfer_spearman": 0.6417574861876211,
+        "transfer_pairwise": 0.7293064316527298
+      },
+      "m0.40 template": {
+        "margin": 0.4,
+        "align": "template",
+        "cv_pc": 0.9356579016356761,
+        "cv_pc_std": 0.0033000775961023075,
+        "cv_mae": 0.18790791592323378,
+        "transfer_spearman": 0.6295618607304506,
+        "transfer_pairwise": 0.7243462881592857
+      },
+      "m0.25 bbox(no align)": {
+        "margin": 0.25,
+        "align": "bbox",
+        "cv_pc": 0.9353347548770504,
+        "cv_pc_std": 0.0029339123647387686,
+        "cv_mae": 0.18873600499472368,
+        "transfer_spearman": 0.6184324492729345,
+        "transfer_pairwise": 0.7204934090214489
+      }
+    }
+  },
+  "artifacts": {},
+  "notes": [],
+  "started_at": "2026-09-03T11:23:43",
+  "duration_sec": 279.2,
+  "hardware": {
+    "gpu": "NVIDIA RTX A6000, 49140 MiB",
+    "cpu": "x86_64",
+    "platform": "Linux-6.8.0-106-generic-x86_64-with-glibc2.35"
+  },
+  "software": {
+    "python": "3.11.15",
+    "numpy": "2.4.6",
+    "sklearn": "1.9.0",
+    "onnxruntime": "1.22.0",
+    "torch": "2.11.0+cu128"
+  },
+  "config_hash": "189aab86057179c6"
+}

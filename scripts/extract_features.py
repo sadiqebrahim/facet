@@ -29,21 +29,31 @@ from facet.models.insightface_backend import (  # noqa: E402
     ArcFaceEmbedder,
     InsightFaceDetector,
     align_to_template,
+    crop_bbox,
 )
 from facet.utils.seed import seed_everything  # noqa: E402
 
 
-def build_crops(ds, names: list[str], margin: float, size: int, use_gpu: bool):
-    """Detect + align every image. Returns (crops, per-image detection metadata).
+def detect_all(ds, names: list[str], dataset: str, use_gpu: bool, cache_dir: Path):
+    """Run detection once per dataset and cache bbox + keypoints.
 
-    Alignment uses the SAME detector and template as the production pipeline. That is
-    deliberate: features extracted with a different crop protocol are not comparable, so
-    the research path and the index path must share this code.
+    Detection dominates extraction cost (~7 ms/image vs ~1 ms to align and encode), and
+    it does not depend on the crop protocol. Caching it makes a margin sweep such as
+    experiment E5 cheap instead of quadratic in the number of configurations.
     """
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache = cache_dir / f"{dataset}__buffalo_l.npz"
+    if cache.exists():
+        z = np.load(cache, allow_pickle=True)
+        if list(z["names"]) == list(names):
+            print(f"  [cache] detections from {cache.name}")
+            return z["bboxes"], z["kps"], z["scores"]
+        print("  [cache] stale (name list changed), re-detecting")
+
     detector = InsightFaceDetector(pack="buffalo_l", use_gpu=use_gpu)
-    crops = np.zeros((len(names), size, size, 3), dtype=np.uint8)
-    meta = []
-    n_fallback = 0
+    bboxes = np.zeros((len(names), 4), dtype=np.float32)
+    kps = np.full((len(names), 5, 2), np.nan, dtype=np.float32)
+    scores = np.zeros(len(names), dtype=np.float32)
     t0 = time.time()
     for i, name in enumerate(names):
         img = cv2.imread(str(ds.image_path(name)))
@@ -51,20 +61,42 @@ def build_crops(ds, names: list[str], margin: float, size: int, use_gpu: bool):
             raise RuntimeError(f"unreadable image: {name}")
         dets = detector.detect(img)
         if dets and dets[0].keypoints is not None:
-            d = dets[0]
-            crops[i] = align_to_template(img, d.keypoints, size=size, margin=margin)
-            meta.append({"file": name, "det_score": d.score, "n_faces": len(dets),
-                         "fallback": False})
+            bboxes[i] = dets[0].bbox
+            kps[i] = dets[0].keypoints
+            scores[i] = dets[0].score
+        if (i + 1) % 1000 == 0:
+            print(f"  detect {i+1}/{len(names)}  ({(i+1)/(time.time()-t0):.0f} img/s)", flush=True)
+    np.savez_compressed(cache, names=np.array(names), bboxes=bboxes, kps=kps, scores=scores)
+    print(f"  detected {int((scores > 0).sum())}/{len(names)}; cached -> {cache.name}")
+    return bboxes, kps, scores
+
+
+def build_crops(ds, names, dataset, margin, size, use_gpu, align="template",
+                cache_dir=None):
+    """Crop every image under one crop protocol. Returns (crops, metadata).
+
+    `align="template"` applies the ArcFace 5-point similarity transform (production
+    behaviour). `align="bbox"` is the E5 control: a plain square bbox crop, no rotation
+    correction.
+    """
+    bboxes, kps, scores = detect_all(ds, names, dataset, use_gpu, cache_dir)
+    crops = np.zeros((len(names), size, size, 3), dtype=np.uint8)
+    meta = []
+    n_fallback = 0
+    for i, name in enumerate(names):
+        img = cv2.imread(str(ds.image_path(name)))
+        ok = scores[i] > 0 and np.isfinite(kps[i]).all()
+        if ok and align == "template":
+            crops[i] = align_to_template(img, kps[i], size=size, margin=margin)
+        elif ok and align == "bbox":
+            crops[i] = crop_bbox(img, tuple(bboxes[i]), size=size, margin=margin)
         else:
-            # Fallback: these images are already tight 350x350 face crops, so a plain
-            # resize is a reasonable degradation. Recorded so it is never invisible.
+            # No usable detection: plain resize. Recorded so it is never invisible.
             n_fallback += 1
             crops[i] = cv2.resize(img, (size, size))
-            meta.append({"file": name, "det_score": 0.0, "n_faces": 0, "fallback": True})
-        if (i + 1) % 500 == 0:
-            rate = (i + 1) / (time.time() - t0)
-            print(f"  detect+align {i+1}/{len(names)}  ({rate:.0f} img/s)", flush=True)
-    print(f"  detection failed on {n_fallback}/{len(names)} images (resize fallback)")
+        meta.append({"file": name, "det_score": float(scores[i]), "fallback": not ok})
+    if n_fallback:
+        print(f"  detection failed on {n_fallback}/{len(names)} images (resize fallback)")
     return crops, meta
 
 
@@ -80,6 +112,8 @@ def main() -> int:
     )
     ap.add_argument("--margin", type=float, default=0.0, help="crop margin (E5 sweeps this)")
     ap.add_argument("--size", type=int, default=112)
+    ap.add_argument("--align", default="template", choices=["template", "bbox"],
+                    help="template = ArcFace 5-point similarity transform; bbox = plain crop")
     ap.add_argument("--cpu", action="store_true")
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
@@ -96,7 +130,8 @@ def main() -> int:
     use_gpu = not args.cpu
 
     prefix = "" if args.dataset == "scut" else f"{args.dataset}__"
-    key = f"{prefix}{args.encoder}__m{args.margin:g}__s{args.size}"
+    suffix = "" if args.align == "template" else f"__{args.align}"
+    key = f"{prefix}{args.encoder}__m{args.margin:g}__s{args.size}{suffix}"
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     feat_path = out_dir / f"{key}.npy"
@@ -135,7 +170,10 @@ def main() -> int:
         version = "procrustes86:v1"
         crop_meta = []
     else:
-        crops, crop_meta = build_crops(ds, names, args.margin, args.size, use_gpu)
+        crops, crop_meta = build_crops(
+            ds, names, args.dataset, args.margin, args.size, use_gpu,
+            align=args.align, cache_dir=Path(args.out_dir).parent / "detections",
+        )
         if args.encoder.startswith("arcface"):
             pack = args.encoder.replace("arcface_", "")
             enc = ArcFaceEmbedder(pack=pack, use_gpu=use_gpu)
@@ -159,6 +197,7 @@ def main() -> int:
         "version": version,
         "crop_margin": args.margin,
         "crop_size": args.size,
+        "align": args.align,
         "n": len(names),
         "dim": int(feats.shape[1]),
         "filenames": names,

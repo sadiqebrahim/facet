@@ -268,6 +268,27 @@ top-100 changing between rater pools. Which pool the population model was traine
 dominates, so §12.2 Path B's "collect our own ratings" remains the real lever.
 Full write-up: `experiments/e14_personalisation/FINDINGS.md`.
 
+**E5 — crop and alignment sensitivity — has run, and it falsified a prior recorded in this
+document.** Sweeping crop margin (0 / 10 / 25 / 40 %) and alignment across three
+representations, reporting both in-benchmark PC and transfer to held-out MEBeauty:
+
+1. **Backbone choice dominates the crop protocol**, contrary to the §2.2 expectation:
+   0.076 PC / 0.305 ρ across backbones vs. 0.002–0.037 PC / 0.030–0.124 ρ across margins.
+2. **Crop margin matters hugely for ArcFace alone** — transfer 0.203 → 0.327 (+61 % relative)
+   from margin 0 to 0.40 — and barely for CLIP. ArcFace's canonical 112×112 crop is framed for
+   *identity* and deliberately discards hair, jawline and head shape, which is exactly what
+   raters use. Same mechanism exp001 surfaced, seen from another angle.
+3. **The in-benchmark and transfer optima disagree.** For the production fusion, PC peaks at
+   margin 0.00 while transfer peaks at 0.25. Optimising on SCUT alone would have cost 0.033
+   transfer ρ for a 0.0008 PC gain. **Production crop margin changed 0.00 → 0.25**
+   (`configs/pipeline/align.yaml` v2). This also means **E7's reported transfer of 0.6084 was
+   pessimistic by ~5 %; the same model at m0.25 reaches 0.6418.**
+4. **Alignment is worth less than assumed** (+0.023 transfer for the fusion) and is *harmful*
+   for ArcFace alone (−0.073), where a plain bbox crop transfers better — plausibly because a
+   5-point similarity transform distorts under real in-the-wild pose.
+
+Full write-up: `experiments/e5_crop_sensitivity/FINDINGS.md`.
+
 ### 1.5 The licensing problem, stated early because it constrains everything
 
 | Asset | License | Commercial? |
@@ -331,8 +352,15 @@ Alignment is not a detail. FBP models are highly sensitive to crop margin and in
 because attractiveness ratings partly encode face *shape*, and a bad crop changes apparent
 shape. **The crop protocol must be fixed and versioned** (`configs/pipeline/align.yaml`) and
 recorded in the feature store, or features extracted on different days will not be comparable.
-Experiment E5 (§14) quantifies exactly how much crop margin matters — my expectation is that it
-is worth more than the choice of backbone, which would be an important and cheap finding.
+
+> **⚠ Prior retired by E5.** I expected crop margin to matter more than the choice of backbone.
+> It does not: backbone choice spans 0.076 PC / 0.305 transfer ρ, while the margin sweep spans
+> only 0.002–0.037 PC / 0.030–0.124 ρ. Representation selection dominates. Two things survive
+> the correction, though: crop margin matters *enormously for ArcFace specifically*
+> (transfer 0.203 → 0.327, +61 % relative, because its canonical crop deliberately discards
+> hair and head shape), and the in-benchmark and transfer optima **disagree**, so the protocol
+> must be selected on transfer. Production margin is now **0.25**, not 0.00.
+> See `experiments/e5_crop_sensitivity/FINDINGS.md`.
 
 ### 2.3 Face embedding / recognition
 
@@ -1451,7 +1479,7 @@ absolute ratings, and it plugs straight into the Bradley–Terry machinery from 
 | **1 ✅** | `exp001` — frozen features + linear heads, reproducible harness | ✅ done: frozen CLIP+ArcFace reaches PC 0.9398, beating fine-tuned baselines |
 | **2 ◑** | E1 identity-leakage audit; identity-disjoint splits | ✅ audit done: ~5 % leakage, +0.003 PC impact. Disjoint splits still TODO |
 | **3** | E3 fine-tuned reference | Reproduce published 0.89/0.90 → harness trusted |
-| **4** | E5, E6 — crop protocol frozen, beauty objective chosen | LDL/ranking beats regression on ranking metrics |
+| **4 ◑** | E5 ✅, E6 — crop protocol frozen, beauty objective chosen | ✅ E5: margin 0.25 selected on transfer, protocol frozen at v2. E6 (objective comparison) still open |
 | **5 ✅** | **E7 cross-dataset** | ✅ **conditional pass**: ranking transfers (ρ 0.61, 72 % of within-dataset), absolute scores and cross-group calibration do not |
 | **6** | E4, E9, E12 — age/gender/quality/uncertainty selected | Calibrated intervals achieve nominal coverage |
 | **7** | E11 fairness audit | Disparities measured and documented |
