@@ -110,7 +110,31 @@ def main() -> int:
         "--splits", nargs="*", default=["cv1", "cv2", "cv3", "cv4", "cv5", "split6040"]
     )
     ap.add_argument("--seed", type=int, default=1337)
+    ap.add_argument(
+        "--allow-partial-overwrite",
+        action="store_true",
+        help="permit a subset run to overwrite an existing full results.json",
+    )
     args = ap.parse_args()
+
+    # A subset run (e.g. --reps X --splits cv1, used for smoke tests and regression
+    # checks) writes to the same results.json as a full run and would silently destroy
+    # the experimental record. Refuse unless explicitly told otherwise, or redirected.
+    partial = set(args.reps) != set(REPRESENTATIONS) or len(args.splits) < 6
+    existing = Path(args.out_dir) / "results.json"
+    if partial and existing.exists() and not args.allow_partial_overwrite:
+        try:
+            prior = json.loads(existing.read_text())
+        except json.JSONDecodeError:
+            prior = {}
+        if len(prior) > len(args.reps):
+            raise SystemExit(
+                f"refusing to overwrite {existing} ({len(prior)} representations on disk) "
+                f"with a partial run ({len(args.reps)} representation(s), "
+                f"{len(args.splits)} split(s)).\n"
+                "Use --out-dir <scratch> for a smoke test, or "
+                "--allow-partial-overwrite if you really mean it."
+            )
 
     seed_everything(args.seed)
     manifest = RunManifest(
