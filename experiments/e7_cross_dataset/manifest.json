@@ -1,0 +1,64 @@
+{
+  "experiment": "e7_cross_dataset",
+  "description": "Does anything learned on SCUT-FBP5500 transfer to MEBeauty?",
+  "config": {
+    "scut_root": "/home/dhruv/sadiq/facet/data/raw/SCUT-FBP5500_v2",
+    "me_root": "/home/dhruv/sadiq/facet/data/raw/MEBeauty",
+    "out_dir": "/home/dhruv/sadiq/facet/experiments/e7_cross_dataset",
+    "margin": 0.0,
+    "size": 112,
+    "seed": 1337
+  },
+  "seed": 1337,
+  "dataset": "SCUT-FBP5500_v2 -> MEBeauty",
+  "dataset_version": "SCUT v2 (2018) / MEBeauty 2022 scores",
+  "split_methodology": "Train on ALL of SCUT-FBP5500 (5500). Test on ALL of MEBeauty (2520), which is fully held out - no MEBeauty image influences the SCUT-trained model. Within-MEBeauty arm uses MEBeauty's own official train/test split. Rank metrics only: the rating scales differ (1-5 vs 1-10).",
+  "metrics": {
+    "arcface_buffalo_l": {
+      "A_scut_to_mebeauty_spearman": 0.20304364279170756,
+      "B_within_mebeauty_spearman": 0.5451656545283298,
+      "C_mebeauty_to_scut_spearman": 0.2947412285742495
+    },
+    "arcface_antelopev2": {
+      "A_scut_to_mebeauty_spearman": 0.42147881074216953,
+      "B_within_mebeauty_spearman": 0.6488801618827527,
+      "C_mebeauty_to_scut_spearman": 0.5539455935770312
+    },
+    "clip": {
+      "A_scut_to_mebeauty_spearman": 0.593789024101458,
+      "B_within_mebeauty_spearman": 0.7934476163932217,
+      "C_mebeauty_to_scut_spearman": 0.7514858025185959
+    },
+    "arcface_r50+clip": {
+      "A_scut_to_mebeauty_spearman": 0.6084032022233475,
+      "B_within_mebeauty_spearman": 0.7990022530610283,
+      "C_mebeauty_to_scut_spearman": 0.7423805694146532
+    },
+    "human_ceiling_mebeauty": {
+      "split_half_spearman": 0.7736450177151368,
+      "spearman_brown_full_pool": 0.8723786439653745,
+      "n_trials": 200
+    }
+  },
+  "artifacts": {},
+  "notes": [
+    "Rank metrics only: SCUT is 1-5, MEBeauty is 1-10.",
+    "MEBeauty is fully held out from the SCUT-trained model.",
+    "Read model rho relative to the human ceiling, not to 1.0."
+  ],
+  "started_at": "2026-09-03T09:14:31",
+  "duration_sec": 101.31,
+  "hardware": {
+    "gpu": "NVIDIA RTX A6000, 49140 MiB",
+    "cpu": "x86_64",
+    "platform": "Linux-6.8.0-106-generic-x86_64-with-glibc2.35"
+  },
+  "software": {
+    "python": "3.11.15",
+    "numpy": "2.4.6",
+    "sklearn": "1.9.0",
+    "onnxruntime": "1.22.0",
+    "torch": "2.11.0+cu128"
+  },
+  "config_hash": "2d5f6780321837f4"
+}

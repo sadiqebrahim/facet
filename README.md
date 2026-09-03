@@ -49,8 +49,14 @@ All processing is local. No image, crop, embedding or prediction leaves the mach
 | [`exp001`](experiments/exp001_frozen_linear_probe/FINDINGS.md) | Do frozen features + a linear head work? | **Yes, better than expected.** Frozen CLIP+ArcFace + ridge reaches **PC 0.9398** on the official 5-fold splits, beating fine-tuned ResNeXt-50 (0.8997) and the reported 2025 SOTA range (0.932–0.935) — with no backbone training. The label-distribution head beat mean-regression on every representation. Ensemble spread was found to be a *useless* confidence signal (22 % coverage at 68 % nominal). |
 | [`e1_identity_audit`](experiments/e1_identity_audit/FINDINGS.md) | Are the official splits subject-disjoint? | **No.** ~5 % of every official test set shares an identity with training (near-duplicates up to cosine 0.998). Measured impact on the headline: +0.003 PC — disclosed, but it does not explain the result. |
 
-Next up is the gate that matters: **E7, cross-dataset generalisation to MEBeauty.**
-Nothing here says the system works on images outside this one benchmark.
+| [`e7_cross_dataset`](experiments/e7_cross_dataset/FINDINGS.md) | **The gate.** Does any of it transfer off-benchmark? | **Conditional pass.** Trained on SCUT, tested on 2,520 held-out in-the-wild MEBeauty faces: ranking transfers (ρ **0.608**, 72 % of within-dataset performance, vs a 0.872 human ceiling). But **cross-group calibration does not** — the top-100 shares only **20/100** members with the one MEBeauty's own raters would pick. Also: training on 2,520 *diverse* images transfers better than 5,500 posed ones. |
+
+**What E7 changed.** Ranking works well enough to build on, so the project proceeds — but
+with a narrower scope than the brief assumed: absolute thresholds like "attractiveness above
+4.0" are not supportable across domains and are replaced by percentile-within-collection;
+production training moves to in-the-wild data; and personalisation is promoted from a
+Phase 10 extra to a core requirement, because two reasonable rater pools disagreeing on 80 %
+of a result set means no single population ranking can be the honest answer.
 
 ## Documentation
 

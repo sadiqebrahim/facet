@@ -48,11 +48,17 @@ different data.
 | IMDB-WIKI / IMDB-Clean | IMDb non-commercial terms [V] | ❌ | research only | ❌ |
 | MORPH | academic free / commercial paid via UNCW [V] | 💰 | per agreement | ❌ |
 | **FairFace** | **CC BY 4.0** [V] | ✅ | ✅ | ✅ with attribution |
-| MEBeauty | **unverified — check before use** | ? | ? | ? |
+| MEBeauty | **non-commercial research only** [V] | ❌ | research only | ❌ |
 | LAGENDA | released with MiVOLO; cite [V] | ? | ? | ? |
 | AVA | unclear (dpchallenge.com sourced) | ? | ? | ? |
 
-**Required citations if used:** SCUT-FBP5500 → Liang et al., ICPR 2018 · FairFace →
+Underlying MEBeauty images are sourced from Unsplash / Pixabay / Pexels, whose own licences
+are permissive; the *ratings* and the compiled database are what carry the non-commercial
+restriction. A commercial track (§3, Path B) could in principle re-rate those images under
+its own rater pool, which E7 suggests is the better product anyway.
+
+**Required citations if used:** SCUT-FBP5500 → Liang et al., ICPR 2018 · MEBeauty →
+Lebedeva, Guo et al., Neural Computing and Applications 2021 · FairFace →
 Kärkkäinen & Joo · MEBeauty → Lebedeva et al. · MiVOLO → Kuprashevich & Tolstykh · InsightFace →
 Deng et al. (ArcFace), Guo et al. (SCRFD).
 
@@ -69,7 +75,9 @@ product. Restriction stated in the README and in the UI.
   IMDb; a lawyer's question, not an engineer's.
 - Embeddings: self-trained on a permissive corpus, or a purchased commercial license
   (InsightFace sells one).
-- Beauty: **our own collected ratings.** Given the rater-pool bias documented in RESEARCH.md §1.1,
+- Beauty: **our own collected ratings.** E7 makes this a quality argument, not only a legal
+  one: the choice of rater pool changed 80 % of a top-100 result set, so owning the rater
+  pool means owning the product's actual behaviour. Given the rater-pool bias documented in RESEARCH.md §1.1,
   this is the better product regardless of licensing — we would control the rater demographics and
   own the individual ratings that §6.3 and §11 need.
 - Excluded entirely: SCUT-FBP5500, CelebA, WIDER FACE, UTKFace, IMDB-*.

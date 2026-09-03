@@ -23,6 +23,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from facet.data.mebeauty import MEBeauty  # noqa: E402
 from facet.data.scut_fbp5500 import ScutFbp5500  # noqa: E402
 from facet.models.insightface_backend import (  # noqa: E402
     ArcFaceEmbedder,
@@ -32,7 +33,7 @@ from facet.models.insightface_backend import (  # noqa: E402
 from facet.utils.seed import seed_everything  # noqa: E402
 
 
-def build_crops(ds: ScutFbp5500, names: list[str], margin: float, size: int, use_gpu: bool):
+def build_crops(ds, names: list[str], margin: float, size: int, use_gpu: bool):
     """Detect + align every image. Returns (crops, per-image detection metadata).
 
     Alignment uses the SAME detector and template as the production pipeline. That is
@@ -69,7 +70,8 @@ def build_crops(ds: ScutFbp5500, names: list[str], margin: float, size: int, use
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--data-root", default=str(ROOT / "data/raw/SCUT-FBP5500_v2"))
+    ap.add_argument("--dataset", default="scut", choices=["scut", "mebeauty"])
+    ap.add_argument("--data-root", default=None)
     ap.add_argument("--out-dir", default=str(ROOT / "artifacts/features"))
     ap.add_argument(
         "--encoder",
@@ -83,11 +85,18 @@ def main() -> int:
     args = ap.parse_args()
 
     seed_everything(1337)
-    ds = ScutFbp5500(args.data_root)
-    names = ds.filenames
+    if args.dataset == "scut":
+        root = args.data_root or str(ROOT / "data/raw/SCUT-FBP5500_v2")
+        ds = ScutFbp5500(root)
+        names = ds.filenames
+    else:
+        root = args.data_root or str(ROOT / "data/raw/MEBeauty")
+        ds = MEBeauty(root)
+        names = ds.keys
     use_gpu = not args.cpu
 
-    key = f"{args.encoder}__m{args.margin:g}__s{args.size}"
+    prefix = "" if args.dataset == "scut" else f"{args.dataset}__"
+    key = f"{prefix}{args.encoder}__m{args.margin:g}__s{args.size}"
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     feat_path = out_dir / f"{key}.npy"
@@ -100,6 +109,11 @@ def main() -> int:
     t0 = time.time()
 
     if args.encoder == "geometry":
+        if args.dataset != "scut":
+            raise SystemExit(
+                "geometry features require SCUT-FBP5500's supplied 86-point landmarks; "
+                "MEBeauty does not ship them"
+            )
         # Uses the dataset's own 86 hand-annotated landmarks - no detection needed.
         from facet.models.geometry import geometry_features
 
@@ -140,6 +154,7 @@ def main() -> int:
     elapsed = time.time() - t0
     np.save(feat_path, feats)
     meta = {
+        "dataset": args.dataset,
         "encoder": args.encoder,
         "version": version,
         "crop_margin": args.margin,

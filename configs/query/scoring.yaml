@@ -23,10 +23,24 @@ preferences:
     report_excluded_uncertain: true
   attractiveness:
     weight: 0.50
-    # P(rating >= threshold) from the distribution head, NOT a thresholded mean:
-    # it accounts for the model's own predicted spread.
-    target: p_ge_threshold
-    threshold: 4.0
+    # E7 finding: absolute score thresholds ("attractiveness above 4.0") do NOT survive a
+    # domain change - the scale is defined by whichever rater pool produced the training
+    # labels, and two reasonable pools disagreed on 80% of a top-100. Rank within the
+    # indexed collection instead: scale-free, well-defined, and honest about what it means.
+    target: top_percentile
+    percentile: 0.80
+    # Still sourced from the distribution head so the model's own spread is accounted for,
+    # and so the UI can show P(rating >= r) alongside the percentile.
+    use_distribution: true
+
+# E7: the model reproduces its TRAINING rater pool's group-level preferences, not any
+# universal ones - measured placement bias up to 0.215 percentile points across
+# gender/ethnicity groups. Ranking all groups together as if scores were comparable is not
+# supportable without disclosing that. Options: 'global' (bias surfaced in the UI) or
+# 'within_group'.
+cross_group_ranking:
+  mode: global
+  surface_measured_bias: true
 
 # Each criterion's match is multiplied by its confidence before weighting, so an
 # uncertain criterion contributes little in either direction rather than contributing a

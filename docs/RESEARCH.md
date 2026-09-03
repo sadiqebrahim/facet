@@ -185,10 +185,49 @@ impact on the headline metric is **+0.003 PC**: real, must be disclosed, but not
 enough to explain the exp001 result. Consequence: build identity-disjoint splits and report
 both, and reuse the clustering for the pipeline's duplicate detection.
 
-**What has not changed:** none of this says anything about generalisation. Everything above
-is one benchmark whose human ceiling is 0.77 and which is now demonstrably saturated.
-**E7 (cross-dataset, MEBeauty) remains the go/no-go gate**, and a CLIP-based model that
-partly keys on photographic style is exactly the kind of model that might transfer poorly.
+**E7 — the gate — has now run, and it passed conditionally.** Training on all of
+SCUT-FBP5500 and testing on all 2,520 held-out MEBeauty images (in-the-wild, six
+ethnicities, 1–10 scale, ~300 raters):
+
+| Arm | Spearman |
+|---|---:|
+| A. SCUT → MEBeauty | **0.6084** |
+| B. MEBeauty → MEBeauty (within-dataset bound, same test rows) | 0.7990 |
+| C. MEBeauty → SCUT (reverse) | **0.7424** |
+| Human ceiling on MEBeauty (split-half, Spearman–Brown) | 0.8724 |
+
+Four findings, two of which change the plan in this document:
+
+1. **Ranking transfers.** 72 % of within-dataset performance survives on identical test
+   rows; 66 % of the human ceiling; pairwise accuracy 0.716 against 0.5 chance.
+2. **Diversity beats scale, and this inverts the training plan.** Arm C (0.742) beats arm A
+   (0.608) with *less than half* the training data. 2,520 diverse in-the-wild images
+   transfer better than 5,500 posed portraits do. **Production training should be on
+   in-the-wild data, with SCUT-FBP5500 demoted to a secondary evaluation set** — the
+   opposite of what §4.1 and §15.6 assumed.
+3. **Unseen ethnicities rank fine, provided CLIP is in the representation.** The
+   out-of-distribution penalty is 0.145 for ArcFace alone and **−0.005** for the fusion.
+   The OOD-ness was in the *representation*, not the labels: CLIP's web-scale pretraining
+   already covers these faces. This substantially softens the §13.1.3 expectation — for
+   ranking *within* a group.
+4. ⚠ **Cross-group calibration does NOT transfer, and within-group correlation hides it.**
+   The model places every female group too low and every male group too high (up to 0.215
+   percentile points, spread 0.414), because it faithfully reproduces the *training* rater
+   pool's group-level preferences. The product-level consequence: **the SCUT-trained
+   model's top-100 shares only 20 of 100 members with the top-100 chosen by MEBeauty's
+   raters**, over-selecting Caucasian faces (58 vs 44) and nearly eliminating Asian faces
+   (3 vs 16).
+
+Finding 4 is the empirical confirmation of §1.1, end to end. Neither top-100 is "correct" —
+they are two rater pools disagreeing. But the disagreement is large enough to change 80 % of
+the result set, which means **any product presenting a single ranking is making an arbitrary
+and undisclosed choice about whose taste to encode.** Consequences: absolute attractiveness
+thresholds must be dropped from the query language in favour of within-collection
+percentiles (§9.3, §15.4); global cross-demographic ranking is not supportable without
+surfacing the measured bias; and **personalisation is promoted from a Phase 10 extra to a
+core requirement** (§6.9, §15.5) because it is the only principled resolution.
+
+Full write-up: `experiments/e7_cross_dataset/FINDINGS.md`.
 
 ### 1.5 The licensing problem, stated early because it constrains everything
 
@@ -1337,7 +1376,9 @@ filters:                       # hard — applied before scoring
 preferences:                   # soft — weighted, confidence-multiplied
   age:            {range: [25, 35], weight: 0.30, softness: 5}
   gender:         {value: female,   weight: 0.20, min_confidence: 0.6}
-  attractiveness: {target: high, threshold: 4.0, weight: 0.50}
+  attractiveness: {target: top_percentile, percentile: 0.80, weight: 0.50}
+  #  ^ E7 showed absolute thresholds ("above 4.0") do not survive a domain change.
+  #    Percentile-within-the-indexed-collection is scale-free and well-defined.
 ranking:
   sort_by: relevance
   limit: 100
@@ -1372,14 +1413,14 @@ absolute ratings, and it plugs straight into the Bradley–Terry machinery from 
 | **2 ◑** | E1 identity-leakage audit; identity-disjoint splits | ✅ audit done: ~5 % leakage, +0.003 PC impact. Disjoint splits still TODO |
 | **3** | E3 fine-tuned reference | Reproduce published 0.89/0.90 → harness trusted |
 | **4** | E5, E6 — crop protocol frozen, beauty objective chosen | LDL/ranking beats regression on ranking metrics |
-| **5** | **E7 cross-dataset** | **⚠ GO/NO-GO: does it transfer to MEBeauty?** |
+| **5 ✅** | **E7 cross-dataset** | ✅ **conditional pass**: ranking transfers (ρ 0.61, 72 % of within-dataset), absolute scores and cross-group calibration do not |
 | **6** | E4, E9, E12 — age/gender/quality/uncertainty selected | Calibrated intervals achieve nominal coverage |
 | **7** | E11 fairness audit | Disparities measured and documented |
 | **8** | Inference pipeline + incremental indexer | Indexes 100 k images without re-doing work |
 | **9** | Query + ranking engine | Brief's example queries work |
 | **10** | API | Stable contract, versioned |
 | **11** | UI | Phase-11 feature list |
-| **12** | E14 personalisation | Beats population model within a realistic label budget |
+| **12 ⬆** | E14 personalisation — **promoted to core by E7** | Beats population model within a realistic label budget |
 | **13** | Optimisation, batching, ONNX/TensorRT | Throughput target on A6000 |
 
 Stage 5 is the real gate. Everything before it is research; everything after assumes the research

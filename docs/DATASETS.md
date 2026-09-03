@@ -41,20 +41,39 @@ frontal photos in 2017"*, which is what it is. Never the sole evaluation.
 
 ---
 
-## MEBeauty — `ACQUIRE` — cross-dataset generalisation test
+## MEBeauty — `HELD` — cross-dataset generalisation test set
+
+Acquired 2026-09-03 from the authors' repository (`github.com/fbplab/MEBeauty-database`).
+All values below are [V], measured from the release itself.
 
 | Field | Value |
 |---|---|
-| Images | 2,550, in-the-wild [S] |
-| Demographics | Caucasian, Asian, Black, Indian, Hispanic, Middle Eastern [S] |
-| Rating scale | 1–10 [S] — **not comparable to SCUT-FBP5500's 1–5** |
-| Raters | diverse in ethnicity, age and gender, deliberately, to reduce cultural bias [S] |
-| Conditions | unconstrained pose/expression/lighting [S] |
-| License | **not verified — must check before use** |
+| Path | `data/raw/MEBeauty/` |
+| Images on disk | 2,544 originals; **2,520 with usable scores** [V] |
+| Demographics | 6 ethnic groups: caucasian 986, asian 348, indian 299, hispanic 297, black 296, mideastern 294 [V] |
+| Gender | roughly balanced within each group [V] |
+| Rating scale | **1–10** [V] — **not comparable to SCUT-FBP5500's 1–5** |
+| Raters | **360 raters, 61,404 individual ratings**, median 25 per image [V] |
+| Per-rater scores | **supplied** (`scores/generic_scores_all_2022.xlsx`, 2,607 × 363) [V] |
+| Mean score | 6.10; range 1.00–9.63 [V] |
+| Mean per-image rater σ | 1.87 on the 1–10 scale (≈0.83 rescaled to 1–5, vs SCUT's 0.64) [V] |
+| **Human ceiling** | split-half rater ρ **0.7736**; Spearman–Brown full-pool **0.8724** [V, measured in E7] |
+| Conditions | unconstrained pose, expression, lighting, background [V] |
+| Splits | official train/val/test supplied (1,990 / 530 after filtering to available images) [V] |
+| Provenance | Unsplash, Pixabay, Pexels [V] |
+| License | **non-commercial research only** [V, from the release README] |
+| Contact | irina.val.lebedeva@gmail.com |
 
-**Verdict:** the single most valuable acquisition target. It is the held-out test for E7, the
-go/no-go experiment. Because scales differ, compare by **rank correlation only** — which is
-exactly the argument for order-learning objectives (§6.4, §9.2 of RESEARCH.md).
+**Overlap with SCUT-FBP5500:** four of its six ethnic groups (black, hispanic, indian,
+mideastern — **1,186 images, 47 %**) have *zero* representation in SCUT-FBP5500. This makes
+it a direct test of out-of-distribution behaviour, not merely a domain-shift test.
+
+**Verdict:** this turned out to be the most informative dataset in the project. E7 showed
+that (a) ranking transfers from SCUT at ρ 0.608, (b) training on MEBeauty transfers to SCUT
+*better* (ρ 0.742) despite being less than half the size, and (c) cross-group calibration
+does not transfer at all. **Recommendation: promote MEBeauty from evaluation set to primary
+training set**, and demote SCUT-FBP5500 to secondary evaluation. Compare across the two by
+**rank correlation only**.
 
 ---
 

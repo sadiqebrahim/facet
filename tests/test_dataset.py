@@ -67,3 +67,55 @@ def test_landmarks_shape_and_the_one_known_bad_file(ds):
     # Exactly one file in the release is unusable - documented in docs/DATASETS.md.
     bad = [n for n, v in zip(ds.filenames, valid) if not v]
     assert bad == ["CM152.jpg"]
+
+
+# ---------------------------------------------------------------- MEBeauty
+
+from facet.data.mebeauty import MEBeauty  # noqa: E402
+
+ME = ROOT / "data/raw/MEBeauty"
+me_only = pytest.mark.skipif(not ME.exists(), reason="MEBeauty not downloaded")
+
+
+@pytest.fixture(scope="module")
+def me():
+    return MEBeauty(ME)
+
+
+@me_only
+def test_mebeauty_counts_and_scale(me):
+    lab = me.labels
+    assert len(lab) == 2520
+    assert lab["mean"].between(1.0, 10.0).all()
+    assert set(lab["ethnicity"]) == {
+        "asian", "black", "caucasian", "hispanic", "indian", "mideastern",
+    }
+
+
+@me_only
+def test_mebeauty_keys_resolve_to_files_on_disk(me):
+    for k in me.keys[:50]:
+        assert me.image_path(k).exists()
+
+
+@me_only
+def test_mebeauty_ood_flag_matches_scut_coverage(me):
+    """SCUT-FBP5500 has only Asian and Caucasian subjects; everything else is OOD."""
+    lab = me.labels
+    assert set(lab.loc[lab["in_scut_distribution"], "ethnicity"]) == {"asian", "caucasian"}
+    assert int((~lab["in_scut_distribution"]).sum()) == 1186
+
+
+@me_only
+def test_mebeauty_splits_are_disjoint(me):
+    sp = me.splits["official"]
+    assert not (set(sp.train) & set(sp.test))
+    assert set(sp.train) | set(sp.test) <= set(me.keys)
+
+
+@me_only
+def test_mebeauty_rater_matrix_aligns_with_labels(me):
+    R, cols = me.rater_matrix()
+    assert R.shape[0] == len(me.labels)
+    assert len(cols) == R.shape[1]
+    assert np.isfinite(R).sum() > 50_000
