@@ -509,10 +509,20 @@ quality = f( detector confidence,
              ... )
 ```
 
-Then validate that composite against a real FIQA model (E9). The embedding-norm proxy is the
-interesting one: even for models not trained with MagFace's objective, embedding norm correlates
-with quality, and we get it for free from a forward pass we are already doing. If the composite
-tracks CR-FIQA at r>0.7, we save a model from the pipeline permanently.
+Then validate that composite (E9). The embedding-norm proxy is the interesting one: even for
+models not trained with MagFace's objective, embedding norm correlates with quality, and we get
+it for free from a forward pass we are already doing.
+
+> **E9 result: the bet pays off, but the first composite was broken.** Validated functionally —
+> does rejecting low-quality faces reduce recognition error (Error-vs-Reject on LFW's 6,000-pair
+> protocol)? The original composite beat random rejection by 41 % but was **beaten by raw face
+> size alone** (AUERC 0.0136 vs 0.0096), because `unit(face_pixels, 112)` saturated and silently
+> deleted the strongest signal, leaving an equal-weight mean that was 0.914-correlated with blur.
+> `contrast` was measured *worse than random*. The repaired `composite_v2` (log-scaled size, no
+> contrast, embedding norm included, rank-normalised heavy-tailed terms) reaches **AUERC 0.0034,
+> 85 % better than random** and beats every individual component. **No FIQA model needs to be
+> trained or downloaded.** Embedding norm alone is +31 % over random, confirming the free-proxy
+> hypothesis. See `experiments/e9_quality/FINDINGS.md`.
 
 Quality matters here for a specific reason beyond hygiene: **beauty predictions on low-quality
 faces are unreliable in a way the model will not otherwise tell us.** A blurry face regresses
@@ -1629,7 +1639,7 @@ absolute ratings, and it plugs straight into the Bradley–Terry machinery from 
 | **3** | E3 fine-tuned reference | Reproduce published 0.89/0.90 → harness trusted |
 | **4 ✅** | E5, E6 — crop protocol frozen, beauty objective chosen | ✅ E5: margin 0.25, protocol v2. ✅ E6: objectives indistinguishable on accuracy; `distribution` head selected for its auxiliary outputs |
 | **5 ✅** | **E7 cross-dataset** | ✅ **conditional pass**: ranking transfers (ρ 0.61, 72 % of within-dataset), absolute scores and cross-group calibration do not |
-| **6 ◑** | E4, E9, E12 — age/gender/quality/uncertainty selected | ✅ E12: conformal achieves nominal coverage in-domain (0.90) but only 0.43–0.78 under domain shift → per-collection calibration + OOD gating required. E4/E9 open |
+| **6 ◑** | E4, E9, E12 — age/gender/quality/uncertainty selected | ✅ E12: conformal nominal in-domain, 0.43–0.78 under shift → per-collection calibration + OOD gating. ✅ E9: free composite validated by ERC on LFW (AUERC 0.0034, +85 % vs random) after repairing a saturation bug; no FIQA model needed. E4 open |
 | **7 ✅** | E11 fairness audit | ✅ done: detection clean (0.0006 spread); attractiveness severe (top-100 skew 2.2×/4.3×). Published in §13.5, not buried |
 | **8 ◑** | Inference pipeline + incremental indexer | Detector settled (E8, adaptive both axes); detection cache keyed on model version. Indexer itself still to build |
 | **9** | Query + ranking engine | Brief's example queries work |

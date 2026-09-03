@@ -66,6 +66,8 @@ All processing is local. No image, crop, embedding or prediction leaves the mach
 
 | [`e8_detection`](experiments/e8_detection/FINDINGS.md) | What does the detector miss in real scenes? | Recall **0.895** on faces ≥32px (0.641 overall on a set whose median face is 20px). Occlusion and blur dominate (0.312 / 0.470); pose barely matters. **The config that won this experiment's own sweep has 0.0000 recall on cropped portraits** — InsightFace upscales small images past SCRFD's range. Both axes are now adaptive, which is strictly dominant on both regimes. |
 
+| [`e9_quality`](experiments/e9_quality/FINDINGS.md) | Is the "free" quality composite real? | **Yes — after fixing it.** Validated functionally (does rejecting low-quality faces cut recognition error?) on LFW's 6,000-pair protocol. The original composite was **beaten by one of its own inputs**: a saturating size term silently deleted the strongest signal and left a blur detector, and `contrast` measured *worse than random*. The repaired version hits **AUERC 0.0034, +85 % vs random**, beating every component. **No FIQA model needs training or downloading.** |
+
 **What E7 changed.** Ranking works well enough to build on, so the project proceeds — but
 with a narrower scope than the brief assumed: absolute thresholds like "attractiveness above
 4.0" are not supportable across domains and are replaced by percentile-within-collection;

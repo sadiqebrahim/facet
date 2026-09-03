@@ -40,3 +40,20 @@ align: template    # template | bbox
 #   auto  auto      0.9975 / 0.6588 / 0.8995      <- strictly dominant
 detect_det_size: auto
 detect_pad_frac: auto
+
+# Quality composite (E9). Validated functionally by Error-vs-Reject on LFW's 6000-pair
+# protocol: does rejecting low-quality faces reduce recognition error?
+#   composite_v2   AUERC 0.0034   (+85% vs random)   <- production
+#   face_pixels    AUERC 0.0096   (+58%)
+#   composite_v1   AUERC 0.0136   (+41%)  superseded: its size term saturated at 112px and
+#                                         silently deleted the strongest signal
+#   contrast       AUERC 0.0248   (-8%)   worse than random; removed
+quality:
+  composite: v2
+  weights: {face_size: 0.45, embedding_norm: 0.25, blur: 0.15, det_score: 0.15}
+  face_size_log_range_px: [24, 400]
+  # Rank-normalised terms MUST use fixed reference quantiles sampled once from the user's
+  # collection - otherwise a face's quality score changes depending on what it is indexed
+  # alongside.
+  rank_reference: per_collection
+  rank_reference_sample: 2000

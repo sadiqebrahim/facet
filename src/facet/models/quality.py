@@ -70,3 +70,57 @@ def composite(
         np.clip(np.asarray(signals.get("contrast", 0.2)) / 0.25, 0.0, 1.0),
     ]
     return np.clip(np.mean(parts, axis=0), 0.0, 1.0)
+
+
+def composite_v2(signals: dict[str, np.ndarray]) -> np.ndarray:
+    """Repaired quality composite. Supersedes `composite`, which E9 showed was broken.
+
+    E9 evaluated the original composite by the field's functional criterion - does
+    rejecting low-quality faces reduce face-recognition error (Error-vs-Reject on LFW's
+    6,000-pair protocol)? It beat random rejection (AUERC 0.0136 vs 0.0229) but was
+    **beaten by one of its own components**, raw face size (0.0096). Diagnosis:
+
+    * `unit(face_pixels, size_ref=112)` SATURATES - almost every detected face is larger
+      than 112px, so the term was 1.0 for nearly everything and contributed no ranking
+      information. Face size is the single strongest signal and the composite was
+      discarding it.
+    * The equal-weight mean was therefore dominated by blur: corr(composite, blur) =
+      +0.914 versus +0.065 for face size. It was, in effect, a blur detector - and blur
+      is one of the WEAKER signals (AUERC 0.0193).
+    * `contrast` is worse than random rejection (0.0248 vs 0.0229), i.e. actively
+      harmful, and was being averaged in at equal weight.
+    * `embedding_norm` - the free MagFace-style proxy - genuinely works (0.0158, 31%
+      better than random) and was not in the composite at all: corr was -0.030.
+
+    The repair is structural rather than fitted: log-scale the size term so it keeps
+    discriminating over the whole useful range, drop contrast, include embedding norm when
+    available, and weight by measured usefulness.
+    """
+    def logsize(px, lo=24.0, hi=400.0):
+        px = np.clip(np.asarray(px, dtype=np.float64), 1.0, None)
+        return np.clip((np.log(px) - np.log(lo)) / (np.log(hi) - np.log(lo)), 0.0, 1.0)
+
+    def rank01(x):
+        """Rank-normalise, so heavy-tailed signals like Laplacian variance are usable."""
+        x = np.asarray(x, dtype=np.float64)
+        if x.size == 0 or np.ptp(x) == 0:
+            return np.zeros_like(x)
+        from scipy.stats import rankdata
+        return (rankdata(x) - 1) / max(len(x) - 1, 1)
+
+    terms, weights = [], []
+    if "face_pixels" in signals:
+        terms.append(logsize(signals["face_pixels"])); weights.append(0.45)
+    if "embedding_norm" in signals:
+        terms.append(rank01(signals["embedding_norm"])); weights.append(0.25)
+    if "blur" in signals:
+        terms.append(rank01(signals["blur"])); weights.append(0.15)
+    if "det_score" in signals:
+        terms.append(np.clip(signals["det_score"], 0.0, 1.0)); weights.append(0.15)
+    # Clipping is a hard defect rather than a graded one, so it multiplies rather than adds.
+    penalty = 1.0 - np.clip(
+        np.asarray(signals.get("clipped_dark", 0.0))
+        + np.asarray(signals.get("clipped_bright", 0.0)), 0.0, 1.0
+    )
+    w = np.array(weights) / np.sum(weights)
+    return np.clip(np.tensordot(w, np.stack(terms), axes=1) * penalty, 0.0, 1.0)
