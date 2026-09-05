@@ -100,6 +100,27 @@ CREATE TABLE IF NOT EXISTS duplicates (
 );
 CREATE INDEX IF NOT EXISTS idx_dup_group ON duplicates(group_id);
 
+-- Phase 10 groundwork. E14 found personalisation only pays off when the rater pool is
+-- diverse, and then only via a residual model gated on how poorly the population model
+-- fits that user - so feedback is stored separately from predictions and never mixed into
+-- the general model (RESEARCH.md 15.5).
+CREATE TABLE IF NOT EXISTS feedback (
+    face_id    INTEGER NOT NULL REFERENCES faces(id) ON DELETE CASCADE,
+    user       TEXT NOT NULL DEFAULT 'default',
+    kind       TEXT NOT NULL,          -- like | dislike | hide | wrong
+    note       TEXT,
+    created_at REAL,
+    PRIMARY KEY (face_id, user, kind)
+);
+CREATE INDEX IF NOT EXISTS idx_feedback_user ON feedback(user, kind);
+
+CREATE TABLE IF NOT EXISTS saved_searches (
+    id         INTEGER PRIMARY KEY,
+    name       TEXT NOT NULL UNIQUE,
+    spec       TEXT NOT NULL,
+    created_at REAL
+);
+
 CREATE TABLE IF NOT EXISTS runs (
     id           INTEGER PRIMARY KEY,
     started_at   REAL,
@@ -261,6 +282,45 @@ class Index:
         self.conn.commit()
 
     # ------------------------------------------------------------------- stats
+
+    # ---------------------------------------------------------------- feedback
+
+    def add_feedback(self, face_id: int, kind: str, user: str = "default",
+                     note: str | None = None) -> None:
+        self.conn.execute(
+            "INSERT INTO feedback(face_id,user,kind,note,created_at) VALUES(?,?,?,?,?) "
+            "ON CONFLICT(face_id,user,kind) DO UPDATE SET note=excluded.note,"
+            "created_at=excluded.created_at",
+            (face_id, user, kind, note, time.time()))
+        self.conn.commit()
+
+    def remove_feedback(self, face_id: int, kind: str, user: str = "default") -> None:
+        self.conn.execute("DELETE FROM feedback WHERE face_id=? AND user=? AND kind=?",
+                          (face_id, user, kind))
+        self.conn.commit()
+
+    def feedback_for(self, user: str = "default") -> dict[int, list[str]]:
+        out: dict[int, list[str]] = {}
+        for r in self.conn.execute(
+                "SELECT face_id, kind FROM feedback WHERE user=?", (user,)):
+            out.setdefault(r["face_id"], []).append(r["kind"])
+        return out
+
+    def save_search(self, name: str, spec: dict) -> None:
+        self.conn.execute(
+            "INSERT INTO saved_searches(name,spec,created_at) VALUES(?,?,?) "
+            "ON CONFLICT(name) DO UPDATE SET spec=excluded.spec, created_at=excluded.created_at",
+            (name, json.dumps(spec, default=str), time.time()))
+        self.conn.commit()
+
+    def list_saved_searches(self) -> list[dict]:
+        return [{"name": r["name"], "spec": json.loads(r["spec"]), "created_at": r["created_at"]}
+                for r in self.conn.execute(
+                    "SELECT name, spec, created_at FROM saved_searches ORDER BY created_at DESC")]
+
+    def delete_saved_search(self, name: str) -> None:
+        self.conn.execute("DELETE FROM saved_searches WHERE name=?", (name,))
+        self.conn.commit()
 
     def stats(self) -> dict:
         c = self.conn

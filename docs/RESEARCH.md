@@ -1666,8 +1666,8 @@ absolute ratings, and it plugs straight into the Bradley–Terry machinery from 
 | **7 ✅** | E11 fairness audit | ✅ done: detection clean (0.0006 spread); attractiveness severe (top-100 skew 2.2×/4.3×). Published in §13.5, not buried |
 | **8 ✅** | Inference pipeline + incremental indexer | ✅ Built: `scripts/index_directory.py` + `scripts/predict_attributes.py`. ~50 img/s index, ~8,400 faces/s re-predict. Corrupt/no-face/duplicate/incremental all verified. See [`docs/PIPELINE.md`](PIPELINE.md) |
 | **9 ✅** | Query + ranking engine | ✅ Built: `scripts/search.py`. The brief's example query works, every result explains its own arithmetic, and diagnostics report what was filtered. See [`docs/QUERY.md`](QUERY.md) |
-| **10** | API | Stable contract, versioned |
-| **11** | UI | Phase-11 feature list |
+| **10 ✅** | API | ✅ FastAPI: search, media, background indexing, feedback, saved searches, export. Provenance travels with every payload. See [`docs/APP.md`](APP.md) |
+| **11 ✅** | UI | ✅ Single-file web app: index progress, weighted criteria, results grid, detail view with the ranking arithmetic, favourites, saved searches, export, dark mode, keyboard nav |
 | **12 ✅** | E14 personalisation — promoted to core by E7 | ✅ **conditional**: +0.025 Spearman at 100 labels in a *diverse* pool; actively harmful in a homogeneous one. Residual formulation confirmed; gate on population fit |
 | **13** | Optimisation, batching, ONNX/TensorRT | Throughput target on A6000 |
 

@@ -120,6 +120,21 @@ Note attractiveness is a **percentile of your collection**, not an absolute thre
 showed absolute scores do not survive a change of image domain.
 Details: [`docs/QUERY.md`](docs/QUERY.md).
 
+## Run the app
+
+```bash
+python scripts/serve.py --index facet.db --features feats/
+# → http://127.0.0.1:8000
+```
+
+Index a directory from the UI, then search it with weighted criteria. Each result opens to a
+detail view showing the original image with the detection box, the full predicted rating
+distribution, rater-disagreement and model-disagreement separately, the calibrated interval
+(or a clear "suppressed" marker when the face is out-of-distribution), and **the arithmetic
+that produced its rank**. Favourites, saved searches, CSV export, dark mode and keyboard
+navigation are included. Everything stays on the machine — the API makes no outbound request
+and binds to localhost. Details: [`docs/APP.md`](docs/APP.md).
+
 ## Documentation
 
 | Document | Contents |
@@ -129,6 +144,7 @@ Details: [`docs/QUERY.md`](docs/QUERY.md).
 | [`docs/LICENSING.md`](docs/LICENSING.md) | License register, the two viable paths, privacy/biometric obligations, responsible-use rules |
 | [`docs/PIPELINE.md`](docs/PIPELINE.md) | The indexing pipeline: architecture, usage, which experiment decided what, measured throughput, limitations |
 | [`docs/QUERY.md`](docs/QUERY.md) | The query and ranking engine: the scoring function, why attractiveness is a percentile, diagnostics, limitations |
+| [`docs/APP.md`](docs/APP.md) | The API and UI: endpoints, the honesty properties the API enforces, what the interface shows and why |
 | [`experiments/`](experiments/) | One directory per experiment: results, run manifest, findings |
 
 ---

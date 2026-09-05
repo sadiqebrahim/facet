@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Facet</title>
+<style>
+:root{
+  --bg:#0f1115; --panel:#161a21; --panel2:#1d222b; --line:#272d38;
+  --fg:#e6e9ef; --muted:#98a2b3; --accent:#6aa6ff; --good:#4ade80; --warn:#fbbf24; --bad:#f87171;
+  --radius:10px;
+}
+[data-theme="light"]{
+  --bg:#f6f7f9; --panel:#fff; --panel2:#f0f2f5; --line:#dfe3ea;
+  --fg:#1a1d23; --muted:#5b6472; --accent:#2563eb;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent)}
+header{display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:20}
+header h1{font-size:16px;margin:0;letter-spacing:.02em}
+header .sub{color:var(--muted);font-size:12px}
+.spacer{flex:1}
+button,select,input{font:inherit;color:var(--fg);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+button{cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:#08111f;border-color:var(--accent);font-weight:600}
+button.ghost{background:transparent}
+.layout{display:grid;grid-template-columns:310px 1fr;gap:0;align-items:start}
+aside{position:sticky;top:49px;height:calc(100vh - 49px);overflow:auto;border-right:1px solid var(--line);background:var(--panel);padding:14px}
+main{padding:16px;min-height:calc(100vh - 49px)}
+.group{border:1px solid var(--line);border-radius:var(--radius);padding:12px;margin-bottom:12px;background:var(--panel2)}
+.group h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:flex;align-items:center;gap:8px}
+.row{display:flex;align-items:center;gap:8px;margin:8px 0}
+.row label{flex:1;color:var(--muted);font-size:13px}
+.row input[type=number]{width:66px}
+.row input[type=range]{flex:1;accent-color:var(--accent)}
+.val{min-width:44px;text-align:right;font-variant-numeric:tabular-nums;color:var(--fg)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;cursor:pointer;position:relative;transition:transform .08s,border-color .12s}
+.card:hover{transform:translateY(-2px);border-color:var(--accent)}
+.card.sel{outline:2px solid var(--accent);outline-offset:-2px}
+.card img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:var(--panel2)}
+.card .meta{padding:8px 10px;font-size:12px}
+.bar{height:4px;background:var(--panel2)}
+.bar > i{display:block;height:100%;background:var(--accent)}
+.chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.chip{font-size:11px;padding:1px 6px;border-radius:999px;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+.chip.warn{color:var(--warn);border-color:#4a3a12}
+.chip.good{color:var(--good)}
+.badge{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.7);color:#fff;font-size:11px;padding:2px 6px;border-radius:6px;backdrop-filter:blur(4px)}
+.fav{position:absolute;top:6px;right:6px;font-size:15px;opacity:.35}
+.fav.on{opacity:1}
+.notice{border:1px solid var(--line);border-left:3px solid var(--warn);background:var(--panel);padding:10px 12px;border-radius:8px;color:var(--muted);font-size:12.5px;margin-bottom:14px}
+.diag{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin:10px 0 16px}
+.diag b{color:var(--fg);font-variant-numeric:tabular-nums}
+dialog{border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:14px;padding:0;max-width:1100px;width:94vw}
+dialog::backdrop{background:rgba(0,0,0,.72)}
+.dlg{display:grid;grid-template-columns:1.15fr .85fr;gap:0}
+.dlg .imgwrap{position:relative;background:#000;display:flex;align-items:center;justify-content:center;min-height:60vh}
+.dlg .imgwrap img{max-width:100%;max-height:78vh;display:block}
+.dlg .side{padding:16px;overflow:auto;max-height:78vh}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin:8px 0}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;font-variant-numeric:tabular-nums}
+.dist{display:flex;align-items:flex-end;gap:3px;height:56px;margin:8px 0}
+.dist div{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-height:2px;position:relative}
+.dist span{position:absolute;bottom:-17px;width:100%;text-align:center;font-size:10px;color:var(--muted)}
+.explain{font-size:12px;border-top:1px solid var(--line);padding-top:8px;margin-top:10px}
+.explain .l{display:flex;justify-content:space-between;gap:10px;padding:3px 0;color:var(--muted)}
+.explain .l b{color:var(--fg);font-variant-numeric:tabular-nums}
+.empty{color:var(--muted);text-align:center;padding:60px 20px}
+progress{width:100%;height:8px}
+.hint{color:var(--muted);font-size:11.5px;margin-top:6px;line-height:1.45}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs button{flex:1;font-size:12px;padding:5px}
+.tabs button[aria-selected=true]{background:var(--accent);color:#08111f;border-color:var(--accent)}
+kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:11px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Facet</h1>
+  <span class="sub" id="stat">loading…</span>
+  <span class="spacer"></span>
+  <select id="sort" title="Sort results by">
+    <option value="relevance">Best overall match</option>
+    <option value="attractiveness">Attractiveness</option>
+    <option value="confidence">Confidence</option>
+    <option value="quality">Face quality</option>
+    <option value="age_match">Age match</option>
+  </select>
+  <button id="export" class="ghost" title="Export current results">Export</button>
+  <button id="theme" class="ghost" title="Toggle theme">◐</button>
+</header>
+
+<div class="layout">
+<aside>
+  <div class="tabs" role="tablist">
+    <button id="tab-search" aria-selected="true">Search</button>
+    <button id="tab-index" aria-selected="false">Index</button>
+  </div>
+
+  <div id="panel-search">
+    <div class="group">
+      <h3>Age</h3>
+      <div class="row"><label>Range</label>
+        <input type="number" id="ageMin" value="25" min="0" max="100">
+        <input type="number" id="ageMax" value="35" min="0" max="100"></div>
+      <div class="row"><label>Importance</label>
+        <input type="range" id="ageW" min="0" max="1" step="0.05" value="0.3">
+        <span class="val" id="ageWv">30%</span></div>
+      <div class="row"><label>Require an age prediction</label>
+        <input type="checkbox" id="ageReq"></div>
+      <p class="hint">Age comes from a lazy pass, so many faces have none yet. Unless you
+        require it, those faces still appear — the criterion just contributes nothing.</p>
+    </div>
+
+    <div class="group">
+      <h3>Gender</h3>
+      <div class="row"><label>Presenting as</label>
+        <select id="gender"><option value="">any</option><option value="female">female</option>
+        <option value="male">male</option></select></div>
+      <div class="row"><label>Importance</label>
+        <input type="range" id="genW" min="0" max="1" step="0.05" value="0.2">
+        <span class="val" id="genWv">20%</span></div>
+      <div class="row"><label>Strict filter</label><input type="checkbox" id="genStrict"></div>
+      <p class="hint">Soft by default. A hard filter on a ~96%-accurate classifier silently
+        drops real matches, unevenly across groups — strict mode reports how many it removed.</p>
+    </div>
+
+    <div class="group">
+      <h3>Attractiveness</h3>
+      <div class="row"><label>Top</label>
+        <input type="range" id="attrPct" min="0" max="0.99" step="0.01" value="0.8">
+        <span class="val" id="attrPctv">20%</span></div>
+      <div class="row"><label>Importance</label>
+        <input type="range" id="attrW" min="0" max="1" step="0.05" value="0.5">
+        <span class="val" id="attrWv">50%</span></div>
+      <p class="hint">A <b>percentile of your collection</b>, not an absolute score. Absolute
+        thresholds don't survive a change of image domain, so "above 4.0" isn't meaningful.</p>
+    </div>
+
+    <div class="group">
+      <h3>Quality &amp; confidence</h3>
+      <div class="row"><label>Min face quality</label>
+        <input type="range" id="minQ" min="0" max="1" step="0.05" value="0.3">
+        <span class="val" id="minQv">0.30</span></div>
+      <div class="row"><label>Min face size (px)</label>
+        <input type="number" id="minPx" value="60" min="0" max="1000"></div>
+      <div class="row"><label>Hide out-of-distribution</label><input type="checkbox" id="noOod"></div>
+      <div class="row"><label>Collapse near-duplicates</label>
+        <input type="checkbox" id="dedup" checked></div>
+      <p class="hint">Out-of-distribution faces are ones the model has no business being
+        confident about; their numeric confidence is suppressed rather than guessed.</p>
+    </div>
+
+    <div class="group">
+      <h3>Saved</h3>
+      <div class="row"><select id="saved" style="flex:1"><option value="">— saved searches —</option></select></div>
+      <div class="row"><button id="save" class="ghost" style="flex:1">Save current</button>
+        <button id="delSaved" class="ghost">Delete</button></div>
+      <div class="row"><button id="showFavs" class="ghost" style="flex:1">Show favourites only</button></div>
+    </div>
+
+    <button id="run" class="primary" style="width:100%">Search</button>
+  </div>
+
+  <div id="panel-index" hidden>
+    <div class="group">
+      <h3>Add a directory</h3>
+      <div class="row"><input id="root" placeholder="/home/you/Photos" style="flex:1"></div>
+      <div class="row"><label>Limit (0 = all)</label><input type="number" id="ilimit" value="0" min="0"></div>
+      <div class="row"><label>Re-index everything</label><input type="checkbox" id="iforce"></div>
+      <button id="startIndex" class="primary" style="width:100%">Scan &amp; index</button>
+      <p class="hint">Re-running is safe and incremental: unchanged files are skipped by
+        timestamp and size before anything is decoded.</p>
+    </div>
+    <div class="group">
+      <h3>Progress</h3>
+      <div id="iprog" class="hint">idle</div>
+      <progress id="ibar" value="0" max="1" hidden></progress>
+    </div>
+    <div class="group">
+      <h3>Index stats</h3>
+      <div id="istats" class="hint">—</div>
+    </div>
+  </div>
+</aside>
+
+<main>
+  <div class="notice" id="notice">…</div>
+  <div class="diag" id="diag"></div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden>No results. Try widening the age range, lowering the
+    attractiveness percentile, or reducing the minimum quality.</div>
+  <div style="text-align:center;margin:20px 0"><button id="more" class="ghost" hidden>Load more</button></div>
+</main>
+</div>
+
+<dialog id="dlg"><div class="dlg">
+  <div class="imgwrap"><img id="dimg" alt="selected image"><canvas id="dbox" style="position:absolute;inset:0;pointer-events:none"></canvas></div>
+  <div class="side" id="dside"></div>
+</div></dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const api = (p,o) => fetch(p,o).then(r => r.ok ? (r.headers.get('content-type')||'').includes('json') ? r.json() : r.text() : r.text().then(t=>{throw new Error(t)}));
+let RESULTS=[], OFFSET=0, LIMIT=60, SEL=new Set(), FAVONLY=false, LAST=null;
+
+const pctLabel = v => `${Math.round((1-v)*100)}%`;
+function spec(off=0){
+  const g=$('#gender').value, prefs={};
+  prefs.age={range:[+$('#ageMin').value,+$('#ageMax').value],weight:+$('#ageW').value,required:$('#ageReq').checked};
+  if(g) prefs.gender={value:g,weight:+$('#genW').value,mode:$('#genStrict').checked?'strict':'soft'};
+  prefs.attractiveness={min_percentile:+$('#attrPct').value,weight:+$('#attrW').value};
+  return {preferences:prefs,
+    filters:{min_quality:+$('#minQ').value,min_face_px:+$('#minPx').value,
+             exclude_ood:$('#noOod').checked,exclude_near_duplicates:$('#dedup').checked},
+    sort_by:$('#sort').value, limit:LIMIT, offset:off};
+}
+
+async function search(more=false){
+  OFFSET = more ? OFFSET+LIMIT : 0;
+  const s = spec(OFFSET); LAST=s;
+  const r = await api('/api/search',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(s)});
+  RESULTS = more ? RESULTS.concat(r.results) : r.results;
+  render(r);
+}
+
+function render(r){
+  const d=r.diagnostics, g=$('#grid');
+  $('#diag').innerHTML = [
+    `<span><b>${r.total_matched}</b> matched</span>`,
+    d.missing_age?`<span><b>${d.missing_age}</b> awaiting age/gender pass</span>`:'',
+    d.collapsed_near_duplicates?`<span><b>${d.collapsed_near_duplicates}</b> near-duplicates collapsed</span>`:'',
+    d.excluded_ood?`<span><b>${d.excluded_ood}</b> out-of-distribution hidden</span>`:'',
+    d.excluded_low_gender_confidence?`<span><b>${d.excluded_low_gender_confidence}</b> excluded: low gender confidence</span>`:'',
+    d.excluded_required_missing?`<span><b>${d.excluded_required_missing}</b> excluded: no age prediction</span>`:'',
+  ].filter(Boolean).join('');
+  const shown = FAVONLY ? RESULTS.filter(x=>(x.feedback||[]).includes('like')) : RESULTS;
+  g.innerHTML = shown.map((x,i)=>card(x,i)).join('');
+  $('#empty').hidden = shown.length>0;
+  $('#more').hidden = RESULTS.length >= r.total_matched;
+  [...g.children].forEach((el,i)=>{
+    el.onclick = e => { if(e.target.classList.contains('fav')) return; open(i); };
+    const f=el.querySelector('.fav'); if(f) f.onclick=e=>{e.stopPropagation();fav(shown[i],f);};
+  });
+}
+
+function card(x,i){
+  const liked=(x.feedback||[]).includes('like');
+  const attr = x.attractiveness==null?'—':x.attractiveness.toFixed(2);
+  const conf = x.confidence==null?'suppressed':Math.round(x.confidence*100)+'%';
+  return `<article class="card ${SEL.has(x.face_id)?'sel':''}">
+    <img loading="lazy" src="/api/crop/${x.face_id}?size=300" alt="detected face">
+    <div class="badge">${Math.round(x.relevance*100)}%</div>
+    <div class="fav ${liked?'on':''}" title="Favourite">${liked?'★':'☆'}</div>
+    <div class="bar"><i style="width:${Math.max(2,x.relevance*100)}%"></i></div>
+    <div class="meta">
+      <div>est. ${attr} / 5 · conf ${conf}</div>
+      <div class="chips">
+        ${x.age!=null?`<span class="chip">~${Math.round(x.age)} yr</span>`:'<span class="chip">age —</span>'}
+        ${x.gender?`<span class="chip">${x.gender}</span>`:''}
+        <span class="chip">q ${x.quality.toFixed(2)}</span>
+        ${x.ood?'<span class="chip warn">out-of-distribution</span>':''}
+      </div>
+    </div></article>`;
+}
+
+async function fav(x,el){
+  const on = el.classList.contains('on');
+  await api('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({face_id:x.face_id,kind:'like',remove:on})});
+  el.classList.toggle('on'); el.textContent = on?'☆':'★';
+  x.feedback = on ? (x.feedback||[]).filter(k=>k!=='like') : [...(x.feedback||[]),'like'];
+}
+
+let CUR=0;
+async function open(i){
+  CUR=i;
+  const shown = FAVONLY ? RESULTS.filter(x=>(x.feedback||[]).includes('like')) : RESULTS;
+  const x=shown[i]; if(!x) return;
+  const full = await api('/api/face/'+x.face_id);
+  $('#dimg').src = '/api/image/'+x.image_id+'?max_px=1400';
+  $('#dimg').onload = () => drawBox(x, full);
+  const b=full.predictions.beauty||{}, e=b.extra||{}, dist=b.distribution||[];
+  const q=full.quality_json||{};
+  const warn=[...(e.warnings||[])];
+  if(x.quality<0.3) warn.push('low face quality — predictions are less reliable');
+  if(full.face_px<60) warn.push('small face ('+Math.round(full.face_px)+' px)');
+  $('#dside').innerHTML = `
+    <h3 style="margin:0 0 4px">${x.path.split('/').pop()}</h3>
+    <div class="hint" style="word-break:break-all;margin-bottom:10px">${x.path}</div>
+    <dl class="kv">
+      <dt>Match</dt><dd>${(x.relevance*100).toFixed(1)}%</dd>
+      <dt>Est. attractiveness</dt><dd>${x.attractiveness?.toFixed(2) ?? '—'} / 5
+        ${x.attractiveness_percentile!=null?`<span class="chip">top ${Math.round((1-x.attractiveness_percentile)*100)}%</span>`:''}</dd>
+      <dt>P(rating ≥ 4)</dt><dd>${x.p_ge4!=null?(x.p_ge4*100).toFixed(0)+'%':'—'}</dd>
+      <dt>90% interval</dt><dd>${x.interval?`${x.interval[0].toFixed(2)} – ${x.interval[1].toFixed(2)}`:'<span class="chip warn">suppressed (out-of-distribution)</span>'}</dd>
+      <dt>Rater disagreement</dt><dd>${e.aleatoric!=null?e.aleatoric.toFixed(2):'—'}</dd>
+      <dt>Model disagreement</dt><dd>${e.epistemic!=null?e.epistemic.toFixed(3):'—'}</dd>
+      <dt>Est. age</dt><dd>${x.age!=null?Math.round(x.age)+' yr':'not predicted yet'}</dd>
+      <dt>Presenting as</dt><dd>${x.gender??'not predicted yet'}${x.gender_confidence?` (${Math.round(x.gender_confidence*100)}%)`:''}</dd>
+      <dt>Face quality</dt><dd>${x.quality.toFixed(2)} · ${Math.round(full.face_px)} px · det ${full.det_score?.toFixed(2)}</dd>
+    </dl>
+    ${dist.length?`<div class="hint">Predicted rating distribution</div>
+      <div class="dist">${dist.map((v,i)=>`<div style="height:${Math.max(3,v*100)}%"><span>${i+1}</span></div>`).join('')}</div>
+      <div style="height:14px"></div>`:''}
+    ${warn.length?`<div class="notice" style="margin:10px 0">${warn.map(w=>'⚠ '+w).join('<br>')}</div>`:''}
+    <div class="explain"><b>Why this ranked here</b>
+      ${x.contributions.map(c=>`<div class="l"><span>${c.criterion} — ${c.detail}</span>
+        <b>${c.contribution.toFixed(3)}</b></div>`).join('')}
+      <div class="l" style="border-top:1px solid var(--line);margin-top:5px;padding-top:5px">
+        <span>relevance</span><b>${x.relevance.toFixed(3)}</b></div></div>
+    <div class="explain"><b>Model &amp; provenance</b>
+      <div class="hint">${b.model_version??'—'}</div>
+      <div class="hint" style="margin-top:6px">${e.source??''}</div></div>
+    <div class="row" style="margin-top:12px">
+      <button onclick="fbk(${x.face_id},'like')">★ Favourite</button>
+      <button onclick="fbk(${x.face_id},'dislike')">Dislike</button>
+      <button onclick="fbk(${x.face_id},'wrong')">Prediction wrong</button>
+    </div>
+    <div class="hint" style="margin-top:8px">
+      <kbd>←</kbd> <kbd>→</kbd> navigate · <kbd>F</kbd> favourite · <kbd>Esc</kbd> close</div>`;
+  $('#dlg').showModal();
+}
+window.fbk = async (id,kind)=>{ await api('/api/feedback',{method:'POST',
+  headers:{'content-type':'application/json'},body:JSON.stringify({face_id:id,kind})});
+  const b=event.target; b.textContent='✓ '+b.textContent.replace('✓ ',''); };
+
+function drawBox(x, full){
+  const img=$('#dimg'), c=$('#dbox');
+  c.width=img.clientWidth; c.height=img.clientHeight;
+  c.style.width=img.clientWidth+'px'; c.style.height=img.clientHeight+'px';
+  c.style.left=img.offsetLeft+'px'; c.style.top=img.offsetTop+'px';
+  const sx=img.clientWidth/full.width, sy=img.clientHeight/full.height;
+  const g=c.getContext('2d'); g.clearRect(0,0,c.width,c.height);
+  g.strokeStyle=getComputedStyle(document.body).getPropertyValue('--accent');
+  g.lineWidth=2; g.strokeRect(x.bbox[0]*sx,x.bbox[1]*sy,(x.bbox[2]-x.bbox[0])*sx,(x.bbox[3]-x.bbox[1])*sy);
+}
+
+document.addEventListener('keydown',e=>{
+  if(!$('#dlg').open) return;
+  const shown = FAVONLY ? RESULTS.filter(x=>(x.feedback||[]).includes('like')) : RESULTS;
+  if(e.key==='ArrowRight'&&CUR<shown.length-1) open(CUR+1);
+  if(e.key==='ArrowLeft'&&CUR>0) open(CUR-1);
+  if(e.key.toLowerCase()==='f'){ const el=$('#grid').children[CUR]?.querySelector('.fav'); el?.click(); }
+});
+
+// ---- indexing -------------------------------------------------------------
+$('#startIndex').onclick = async ()=>{
+  const roots=[$('#root').value.trim()].filter(Boolean);
+  if(!roots.length) return alert('Enter a directory path');
+  try{ await api('/api/index',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({roots,limit:+$('#ilimit').value,force:$('#iforce').checked})});
+    poll(); }catch(err){ alert(err.message); }
+};
+async function poll(){
+  const s=await api('/api/index/status');
+  const p=$('#iprog');
+  if(s.status==='idle'){ p.textContent='idle'; }
+  else if(s.running){
+    p.textContent=`${s.status}… ${s.indexed??0} indexed · ${s.faces??0} faces · ${s.failed??0} failed`;
+    $('#ibar').hidden=false; $('#ibar').removeAttribute('value');
+    setTimeout(poll,1000); return;
+  } else {
+    $('#ibar').hidden=true;
+    p.innerHTML = s.status==='failed' ? `<span style="color:var(--bad)">failed: ${s.error}</span>`
+      : `done — ${s.indexed} indexed, ${s.skipped} unchanged, ${s.faces} faces, ${s.failed} failed`
+        + (s.errors?.length?`<br><span class="hint">${s.errors.length} error(s): ${s.errors[0].error}</span>`:'');
+    stats();
+  }
+}
+async function stats(){
+  const s=await api('/api/stats');
+  $('#stat').textContent=`${s.images.toLocaleString()} images · ${s.faces.toLocaleString()} faces · ${s.predictions.toLocaleString()} predictions`;
+  $('#istats').innerHTML = Object.entries(s.by_status||{}).map(([k,v])=>`${k}: <b>${v}</b>`).join(' · ')
+    + '<br>' + Object.entries(s.by_model||{}).map(([k,v])=>`${k}: <b>${v}</b>`).join(' · ');
+}
+
+// ---- saved searches / export / theme ---------------------------------------
+async function loadSaved(){
+  const l=await api('/api/searches');
+  $('#saved').innerHTML='<option value="">— saved searches —</option>'+l.map(s=>`<option>${s.name}</option>`).join('');
+  $('#saved').onchange=()=>{ const s=l.find(x=>x.name===$('#saved').value); if(s) apply(s.spec); };
+}
+function apply(s){
+  const p=s.preferences||{};
+  if(p.age){ $('#ageMin').value=p.age.range[0]; $('#ageMax').value=p.age.range[1]; $('#ageW').value=p.age.weight; }
+  if(p.gender){ $('#gender').value=p.gender.value; $('#genW').value=p.gender.weight; }
+  if(p.attractiveness){ $('#attrPct').value=p.attractiveness.min_percentile; $('#attrW').value=p.attractiveness.weight; }
+  if(s.filters){ $('#minQ').value=s.filters.min_quality??0.3; $('#minPx').value=s.filters.min_face_px??60; }
+  syncLabels(); search();
+}
+$('#save').onclick=async()=>{ const n=prompt('Name this search'); if(!n) return;
+  await api('/api/searches',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({name:n,spec:spec()})}); loadSaved(); };
+$('#delSaved').onclick=async()=>{ const n=$('#saved').value; if(!n) return;
+  await fetch('/api/searches/'+encodeURIComponent(n),{method:'DELETE'}); loadSaved(); };
+$('#export').onclick=async()=>{
+  const r=await fetch('/api/export?fmt=csv',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({...spec(),limit:1000})});
+  const blob=await r.blob(), a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='facet_results.csv'; a.click();
+};
+$('#showFavs').onclick=e=>{ FAVONLY=!FAVONLY; e.target.textContent=FAVONLY?'Show all':'Show favourites only'; render({total_matched:RESULTS.length,diagnostics:{}}); };
+$('#theme').onclick=()=>{ const d=document.documentElement;
+  d.dataset.theme = d.dataset.theme==='dark'?'light':'dark';
+  localStorage.setItem('facet-theme',d.dataset.theme); };
+$('#tab-search').onclick=()=>tab(true); $('#tab-index').onclick=()=>tab(false);
+function tab(searchOn){ $('#panel-search').hidden=!searchOn; $('#panel-index').hidden=searchOn;
+  $('#tab-search').ariaSelected=searchOn; $('#tab-index').ariaSelected=!searchOn; if(!searchOn) poll(); }
+
+function syncLabels(){
+  $('#ageWv').textContent=Math.round($('#ageW').value*100)+'%';
+  $('#genWv').textContent=Math.round($('#genW').value*100)+'%';
+  $('#attrWv').textContent=Math.round($('#attrW').value*100)+'%';
+  $('#attrPctv').textContent=pctLabel(+$('#attrPct').value);
+  $('#minQv').textContent=(+$('#minQ').value).toFixed(2);
+}
+['ageW','genW','attrW','attrPct','minQ'].forEach(id=>$('#'+id).oninput=syncLabels);
+$('#run').onclick=()=>search(); $('#more').onclick=()=>search(true);
+$('#sort').onchange=()=>search();
+
+(async function init(){
+  document.documentElement.dataset.theme = localStorage.getItem('facet-theme')||'dark';
+  syncLabels();
+  const a=await api('/api/about');
+  $('#notice').innerHTML = `<b>These are model estimates, not measurements.</b>
+    ${a.disclaimer.estimates_not_measurements}<br><br>${a.disclaimer.measured_skew}`;
+  await stats(); await loadSaved(); await search();
+})();
+</script>
+</body>
+</html>
