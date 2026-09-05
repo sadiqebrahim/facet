@@ -86,6 +86,20 @@ user's labels alone is catastrophic cold-start), and it should be gated on how p
 population model already fits that user. The bigger lever remains **whose ratings you train
 on in the first place.**
 
+## The pipeline
+
+Phase 8 is built. Point it at directories and it produces a queryable index:
+
+```bash
+python scripts/index_directory.py ~/Photos --index facet.db --features feats/
+python scripts/predict_attributes.py --index facet.db --features feats/ --pass all
+```
+
+~50 img/s to index; **~8,400 faces/s** to re-predict over cached features, which is the
+encode-once/predict-cheaply split paying for itself. Corrupt files, faceless images,
+duplicates and incremental re-runs are all handled and tested rather than assumed.
+Details and limitations: [`docs/PIPELINE.md`](docs/PIPELINE.md).
+
 ## Documentation
 
 | Document | Contents |
@@ -93,6 +107,7 @@ on in the first place.**
 | [`docs/RESEARCH.md`](docs/RESEARCH.md) | **The Phase 1 report.** Models, papers, datasets, beauty/age/gender/ranking/ensemble/uncertainty approaches, licensing, biases, recommended experiments, architecture, roadmap |
 | [`docs/DATASETS.md`](docs/DATASETS.md) | Per-dataset cards: size, demographics, rating methodology, biases, licensing, identity-overlap risk |
 | [`docs/LICENSING.md`](docs/LICENSING.md) | License register, the two viable paths, privacy/biometric obligations, responsible-use rules |
+| [`docs/PIPELINE.md`](docs/PIPELINE.md) | The indexing pipeline: architecture, usage, which experiment decided what, measured throughput, limitations |
 | [`experiments/`](experiments/) | One directory per experiment: results, run manifest, findings |
 
 ---

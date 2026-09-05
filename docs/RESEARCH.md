@@ -1664,7 +1664,7 @@ absolute ratings, and it plugs straight into the Bradley–Terry machinery from 
 | **5 ✅** | **E7 cross-dataset** | ✅ **conditional pass**: ranking transfers (ρ 0.61, 72 % of within-dataset), absolute scores and cross-group calibration do not |
 | **6 ✅** | E4, E9, E12 — age/gender/quality/uncertainty selected | ✅ E12 conformal (nominal in-domain, 0.43–0.78 under shift → per-collection + OOD gating). ✅ E9 free quality composite validated by ERC (AUERC 0.0034) after repairing a saturation bug. ✅ E4 MiVOLO adopted (0.961 / 5.14 yr, ~3× fairer than the baseline, ~190× slower → run lazily) |
 | **7 ✅** | E11 fairness audit | ✅ done: detection clean (0.0006 spread); attractiveness severe (top-100 skew 2.2×/4.3×). Published in §13.5, not buried |
-| **8 ◑** | Inference pipeline + incremental indexer | Detector settled (E8, adaptive both axes); detection cache keyed on model version. Indexer itself still to build |
+| **8 ✅** | Inference pipeline + incremental indexer | ✅ Built: `scripts/index_directory.py` + `scripts/predict_attributes.py`. ~50 img/s index, ~8,400 faces/s re-predict. Corrupt/no-face/duplicate/incremental all verified. See [`docs/PIPELINE.md`](PIPELINE.md) |
 | **9** | Query + ranking engine | Brief's example queries work |
 | **10** | API | Stable contract, versioned |
 | **11** | UI | Phase-11 feature list |
