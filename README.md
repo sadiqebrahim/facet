@@ -68,6 +68,8 @@ All processing is local. No image, crop, embedding or prediction leaves the mach
 
 | [`e9_quality`](experiments/e9_quality/FINDINGS.md) | Is the "free" quality composite real? | **Yes — after fixing it.** Validated functionally (does rejecting low-quality faces cut recognition error?) on LFW's 6,000-pair protocol. The original composite was **beaten by one of its own inputs**: a saturating size term silently deleted the strongest signal and left a blur detector, and `contrast` measured *worse than random*. The repaired version hits **AUERC 0.0034, +85 % vs random**, beating every component. **No FIQA model needs training or downloading.** |
 
+| [`e4_age_gender`](experiments/e4_age_gender/FINDINGS.md) | Which off-the-shelf age/gender model? | **MiVOLO, decisively** — 0.961 gender / 5.14 yr MAE vs the on-disk baseline's 0.809 / 10.99 yr, measured on our own balanced set. The **fairness gain is bigger than the accuracy gain**: race disparity falls ~3× on both axes, and age error on children goes from 19.7 years to 3.0. Costs ~190× the compute, so it runs lazily. Integrated without its AGPL detector dependency, enforced by tests. |
+
 **What E7 changed.** Ranking works well enough to build on, so the project proceeds — but
 with a narrower scope than the brief assumed: absolute thresholds like "attractiveness above
 4.0" are not supportable across domains and are replaced by percentile-within-collection;

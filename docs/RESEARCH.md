@@ -363,6 +363,11 @@ at the attribute stages and dominates at attractiveness: on a balanced set, the 
 White faces into its top 100 at **2.2× their share** and Southeast Asian faces at **0.23×**
 (§13.5).
 
+> **Superseded in part by E4.** The gender/age disparities below were largely a property of
+> the weak on-disk baseline rather than irreducible: MiVOLO cuts gender disparity 0.110 → 0.039
+> and age disparity 2.82 → 1.00 yr. Detection remains clean and **attractiveness remains
+> severe** — that one is not a model-quality problem and does not go away with a better model.
+
 Two secondary findings worth carrying: age error varies **5× more by age bucket than by race**
 (children 16.7 yr, elderly 19.9 yr, vs 5.9 yr for 20–29), so a single global "±N years" claim
 would be dishonest; and the on-disk InsightFace `genderage` baseline manages only 78 % gender
@@ -985,7 +990,19 @@ photo directory.
 
 **Decision:** use **MiVOLO** off the shelf. Do not train an age model. Rationale: it is
 Apache-2.0 [V], reports 4.22–4.24 MAE on IMDB-clean and 3.65 on Lagenda [V], and no realistic
-in-house effort on our data budget beats that. Our work on age is limited to:
+in-house effort on our data budget beats that.
+
+> **Confirmed by E4, on our own balanced set** (FairFace, 10,954 images) rather than taken from
+> the paper. MiVOLO **0.961 gender / 5.14 yr MAE** against the on-disk InsightFace baseline's
+> **0.809 / 10.99 yr**. The fairness gain exceeds the accuracy gain: gender disparity across
+> races falls 0.110 → **0.039** and age disparity 2.82 → **1.00 yr**, both ~3×. Age error by
+> bucket flattens from a 12.6-year spread to 4.3 — the baseline had 19.7 years of error on
+> 3–9-year-olds, MiVOLO has 2.98. Two caveats: it is **~190× slower** (24 vs 4,628 img/s), so it
+> must run lazily rather than on every detection; and its card does not enumerate its training
+> data, so **FairFace contamination is possible** and the gap is an upper bound.
+> See `experiments/e4_age_gender/FINDINGS.md`.
+
+Our work on age is limited to:
 
 1. **Independent benchmarking** on our own data (E4) — never on IMDB-clean, which MiVOLO trained on.
 2. **Uncertainty**: MiVOLO gives a point estimate. We add σ via test-time augmentation
@@ -1639,7 +1656,7 @@ absolute ratings, and it plugs straight into the Bradley–Terry machinery from 
 | **3** | E3 fine-tuned reference | Reproduce published 0.89/0.90 → harness trusted |
 | **4 ✅** | E5, E6 — crop protocol frozen, beauty objective chosen | ✅ E5: margin 0.25, protocol v2. ✅ E6: objectives indistinguishable on accuracy; `distribution` head selected for its auxiliary outputs |
 | **5 ✅** | **E7 cross-dataset** | ✅ **conditional pass**: ranking transfers (ρ 0.61, 72 % of within-dataset), absolute scores and cross-group calibration do not |
-| **6 ◑** | E4, E9, E12 — age/gender/quality/uncertainty selected | ✅ E12: conformal nominal in-domain, 0.43–0.78 under shift → per-collection calibration + OOD gating. ✅ E9: free composite validated by ERC on LFW (AUERC 0.0034, +85 % vs random) after repairing a saturation bug; no FIQA model needed. E4 open |
+| **6 ✅** | E4, E9, E12 — age/gender/quality/uncertainty selected | ✅ E12 conformal (nominal in-domain, 0.43–0.78 under shift → per-collection + OOD gating). ✅ E9 free quality composite validated by ERC (AUERC 0.0034) after repairing a saturation bug. ✅ E4 MiVOLO adopted (0.961 / 5.14 yr, ~3× fairer than the baseline, ~190× slower → run lazily) |
 | **7 ✅** | E11 fairness audit | ✅ done: detection clean (0.0006 spread); attractiveness severe (top-100 skew 2.2×/4.3×). Published in §13.5, not buried |
 | **8 ◑** | Inference pipeline + incremental indexer | Detector settled (E8, adaptive both axes); detection cache keyed on model version. Indexer itself still to build |
 | **9** | Query + ranking engine | Brief's example queries work |

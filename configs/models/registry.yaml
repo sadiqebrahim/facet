@@ -50,19 +50,35 @@ encoders:
 attributes:
   age_gender_mivolo:
     backend: mivolo
+    weights: hf:iitolstykh/mivolo_v2
     license: Apache-2.0
     commercial_use: true
-    status: not-yet-acquired
+    status: adopted            # E4: 0.961 gender / 5.14 yr MAE on FairFace
+    # E4: MiVOLO scores best on a WIDE crop (full frame 0.961) rather than the tight 112px
+    # ArcFace crop (0.943) - it is a face+body model and uses the context. Age/gender needs
+    # its own crop protocol: one detection, two crops.
+    crop: wide
+    crop_margin: 1.0
+    # ~190x slower than the retired baseline (24 vs 4628 img/s), so it dominates indexing
+    # time. Run lazily on faces that survive quality/query filters, not on every detection.
+    run_policy: lazy
     warning: >
       MiVOLO's own weights are Apache-2.0, but its bundled detector is Ultralytics
-      YOLOv8 (AGPL-3.0). Use MiVOLO's age/gender head with our SCRFD detector and do
-      not introduce the AGPL dependency.
+      YOLOv8 (AGPL-3.0). Only the model definition is vendored (facet/third_party/mivolo);
+      yolo_detector.py is excluded and we drive the model with our own SCRFD detector.
+      Enforced by tests/test_licensing.py.
+    caveat: >
+      Weights are Apache-2.0 but the training data includes IMDB-clean, which derives from
+      IMDb under non-commercial terms. Apache-2.0 on weights does not launder training-data
+      provenance - a question for a lawyer before commercial use. Training data is also not
+      fully enumerated, so FairFace contamination in E4's numbers cannot be ruled out.
   age_gender_insightface:
     backend: insightface
     pack: buffalo_l
     file: genderage.onnx
     license: research-only
     commercial_use: false
+    status: retired    # E4: 0.809 gender / 10.99 yr MAE on FairFace, and ~3x the disparity
 
 beauty:
   ridge_ldl_arcface_r50:
