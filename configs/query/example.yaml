@@ -1,0 +1,45 @@
+# The brief's example query, expressed for the engine.
+#
+#   Age: 25-35,          importance 30%
+#   Gender: Female,      importance 20%
+#   Attractiveness: High, importance 50%
+#
+#   python scripts/search.py --index facet.db --query configs/query/example.yaml
+
+preferences:
+  age:
+    range: [25, 35]
+    weight: 0.30
+    softness: 5              # 36 should not score zero when 25-35 was asked for
+    # E4 measured age error varying 5x more by age bucket than by race, so a face the
+    # model is less sure about gets a gentler penalty for falling outside the range.
+    scale_softness_by_uncertainty: true
+    required: false          # true would exclude faces awaiting the lazy age pass
+
+  gender:
+    value: female
+    weight: 0.20
+    # Soft by default (RESEARCH.md 8). A hard filter on a ~96%-accurate classifier
+    # silently discards true matches, unevenly across groups. 'strict' is available and
+    # reports how many it excluded.
+    mode: soft
+    min_confidence: 0.6
+
+  attractiveness:
+    # E7: absolute thresholds ("above 4.0") do not survive a domain change - two rater
+    # pools disagreed on 80% of a top-100. Percentile-within-collection is label-free and
+    # well defined, which matters because a photo directory has no ground truth.
+    min_percentile: 0.80     # top 20% of this collection
+    weight: 0.50
+    use_p_ge4: true          # rank by P(rating >= 4), not the mean (RESEARCH.md 9.3)
+
+filters:                     # hard constraints, applied before scoring
+  min_quality: 0.30
+  min_face_px: 60
+  exclude_ood: false         # true drops faces the model should not be confident about
+  exclude_near_duplicates: true
+
+sort_by: relevance           # relevance | attractiveness | confidence | quality | age_match
+limit: 100
+offset: 0
+confidence_weighting: true   # match x confidence, so uncertainty contributes little

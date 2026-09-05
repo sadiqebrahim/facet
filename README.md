@@ -100,6 +100,26 @@ encode-once/predict-cheaply split paying for itself. Corrupt files, faceless ima
 duplicates and incremental re-runs are all handled and tested rather than assumed.
 Details and limitations: [`docs/PIPELINE.md`](docs/PIPELINE.md).
 
+Then query it — the brief's example, with every result explaining its own score:
+
+```bash
+python scripts/search.py --index facet.db \
+    --age 25 35 --age-weight 0.3 --gender female --gender-weight 0.2 \
+    --attractiveness-percentile 0.8 --attractiveness-weight 0.5 --explain
+```
+
+```
+  #    rel   attr   pct   age   gender  qual  file
+  1  0.777   3.87  0.99    29   female  0.49  008626.jpg
+      age             match=1.000 x conf=0.653 x w=0.30 = 0.1960   (predicted 29, wanted 25-35)
+      gender          match=0.997 x conf=0.997 x w=0.20 = 0.1988   (female (p=1.00), wanted female)
+      attractiveness  match=0.973 x conf=0.786 x w=0.50 = 0.3823   (percentile 0.99, wanted top 20%)
+```
+
+Note attractiveness is a **percentile of your collection**, not an absolute threshold — E7
+showed absolute scores do not survive a change of image domain.
+Details: [`docs/QUERY.md`](docs/QUERY.md).
+
 ## Documentation
 
 | Document | Contents |
@@ -108,6 +128,7 @@ Details and limitations: [`docs/PIPELINE.md`](docs/PIPELINE.md).
 | [`docs/DATASETS.md`](docs/DATASETS.md) | Per-dataset cards: size, demographics, rating methodology, biases, licensing, identity-overlap risk |
 | [`docs/LICENSING.md`](docs/LICENSING.md) | License register, the two viable paths, privacy/biometric obligations, responsible-use rules |
 | [`docs/PIPELINE.md`](docs/PIPELINE.md) | The indexing pipeline: architecture, usage, which experiment decided what, measured throughput, limitations |
+| [`docs/QUERY.md`](docs/QUERY.md) | The query and ranking engine: the scoring function, why attractiveness is a percentile, diagnostics, limitations |
 | [`experiments/`](experiments/) | One directory per experiment: results, run manifest, findings |
 
 ---
