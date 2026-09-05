@@ -1455,10 +1455,16 @@ ridge head, on the official 5-fold and 60/40 splits. *Question:* which frozen re
 predicts attractiveness, and how close does frozen+linear get to fine-tuned? *Decision:* the
 entire feature-store architecture (§6.6). *Cost:* ~10 GPU-minutes total.
 
-**E3 · Fine-tuned reference.** ResNet-18 / ResNeXt-50 fine-tuned, to reproduce the published
-0.8900 / 0.8997 [V] and confirm our harness is sound. *Question:* is our evaluation code
-correct? *Decision:* validates every subsequent number. **An experiment harness that cannot
-reproduce a known result cannot be trusted to measure a new one.**
+**E3 · Fine-tuned reference.** ✅ **Done — harness validated.** ResNet-18 reproduces at
+**0.8794** (published 0.8900, Δ −0.011) and ResNeXt-50 at **0.8816** (published 0.8997,
+Δ −0.018); on the 60/40 split Δ is +0.016 and −0.007. **Neither exceeds its published number**,
+which is the sign that matters: coming in above would have suggested our pipeline was exploiting
+the ~5 % identity leakage E1 found in these splits. AlexNet undershoots by 0.046, attributable
+to our recipe — it required lr 3e-4 where the others took 1e-3, so it got 3.3× less learning
+rate under a shared epoch budget. Consequence for exp001: frozen features (0.9398) beat our own
+fine-tuned ResNeXt-50 by +0.058 and the stronger published baseline by **+0.040**, so that claim
+survives being checked against baselines we trained ourselves.
+See `experiments/e3_finetuned_reference/FINDINGS.md`.
 
 **E4 · Off-the-shelf age/gender benchmark.** MiVOLO vs. InsightFace `genderage` on FairFace and
 UTKFace (never on IMDB-clean). Report MAE by decade and by group. *Decision:* production age model.
@@ -1653,7 +1659,7 @@ absolute ratings, and it plugs straight into the Bradley–Terry machinery from 
 | **0 ✅** | Research report; repo skeleton; env; dataset acquired | — |
 | **1 ✅** | `exp001` — frozen features + linear heads, reproducible harness | ✅ done: frozen CLIP+ArcFace reaches PC 0.9398, beating fine-tuned baselines |
 | **2 ◑** | E1 identity-leakage audit; identity-disjoint splits | ✅ audit done: ~5 % leakage, +0.003 PC impact. Disjoint splits still TODO |
-| **3** | E3 fine-tuned reference | Reproduce published 0.89/0.90 → harness trusted |
+| **3 ✅** | E3 fine-tuned reference | ✅ ResNet-18 0.8794 / ResNeXt-50 0.8816 vs published 0.8900 / 0.8997 — within 0.02 and, importantly, not above. Harness trusted |
 | **4 ✅** | E5, E6 — crop protocol frozen, beauty objective chosen | ✅ E5: margin 0.25, protocol v2. ✅ E6: objectives indistinguishable on accuracy; `distribution` head selected for its auxiliary outputs |
 | **5 ✅** | **E7 cross-dataset** | ✅ **conditional pass**: ranking transfers (ρ 0.61, 72 % of within-dataset), absolute scores and cross-group calibration do not |
 | **6 ✅** | E4, E9, E12 — age/gender/quality/uncertainty selected | ✅ E12 conformal (nominal in-domain, 0.43–0.78 under shift → per-collection + OOD gating). ✅ E9 free quality composite validated by ERC (AUERC 0.0034) after repairing a saturation bug. ✅ E4 MiVOLO adopted (0.961 / 5.14 yr, ~3× fairer than the baseline, ~190× slower → run lazily) |

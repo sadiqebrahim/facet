@@ -70,6 +70,8 @@ All processing is local. No image, crop, embedding or prediction leaves the mach
 
 | [`e4_age_gender`](experiments/e4_age_gender/FINDINGS.md) | Which off-the-shelf age/gender model? | **MiVOLO, decisively** — 0.961 gender / 5.14 yr MAE vs the on-disk baseline's 0.809 / 10.99 yr, measured on our own balanced set. The **fairness gain is bigger than the accuracy gain**: race disparity falls ~3× on both axes, and age error on children goes from 19.7 years to 3.0. Costs ~190× the compute, so it runs lazily. Integrated without its AGPL detector dependency, enforced by tests. |
 
+| [`e3_finetuned_reference`](experiments/e3_finetuned_reference/FINDINGS.md) | Can the harness reproduce a known published result? | **Yes.** ResNet-18 **0.8794** vs published 0.8900 and ResNeXt-50 **0.8816** vs 0.8997 — within 0.02, and crucially **not above** (coming in high would have signalled the harness was exploiting E1's ~5 % identity leakage). Also confirms exp001's headline against baselines we trained ourselves: frozen features still win by **+0.040** over the stronger published opponent. |
+
 **What E7 changed.** Ranking works well enough to build on, so the project proceeds — but
 with a narrower scope than the brief assumed: absolute thresholds like "attractiveness above
 4.0" are not supportable across domains and are replaced by percentile-within-collection;
