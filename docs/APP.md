@@ -81,6 +81,13 @@ naming it in the request body, and there is a test asserting exactly that.
 Passwords are PBKDF2-SHA256 with a per-user salt and a constant-time comparison; sessions are
 random 256-bit tokens with a 30-day expiry.
 
+**Authentication is enforced server-side, not by the UI.** The sign-in panel is only
+decoration — deleting it in devtools reveals an empty shell, because every endpoint that
+returns face data, imagery, predictions or statistics requires a valid session. Media
+(`/api/crop`, `/api/image`) additionally accepts the token as `?t=` because an `<img>` tag
+cannot set an `Authorization` header; it is the same token with the same lifetime, not a
+weaker side door. Only `/api/about` and `/api/auth/*` are reachable unauthenticated.
+
 **There is no TLS.** On an untrusted network, passwords and tokens cross the wire in the
 clear. Put it behind a VPN or an HTTPS reverse proxy — which is what `serve.py` prints when
 you bind beyond localhost.

@@ -10,9 +10,11 @@
 /* 8pt spacing scale, dark greys rather than pure black, medium weights ------------ */
 :root{
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
-  --bg:#0d0f13; --surface:#14171d; --surface2:#1a1e26; --raised:#20252f;
-  --line:#252b36; --line2:#323a48;
-  --fg:#e8ebf0; --fg2:#aab3c0; --fg3:#6f7885;
+  --bg:#101319; --surface:#171b23; --surface2:#1e232d; --raised:#262c38;
+  --line:#2c3340; --line2:#3b4453;
+  /* fg3 was #6f7885 - 4.07:1 on the panel, under the 4.5:1 AA floor, and it is used for
+     the small explanatory notes where legibility matters most. */
+  --fg:#eef1f6; --fg2:#c8d0dc; --fg3:#98a2b3;
   --accent:#5b9dff; --accent-dim:#2d4f80;
   --good:#3ddc97; --warn:#f5b544; --bad:#ff6b6b;
   --r1:6px; --r2:10px; --r3:14px;
@@ -26,6 +28,10 @@
   --accent:#2563eb; --accent-dim:#bfd4fb;
   --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.08);
 }
+/* An author `display:` rule outranks the user-agent's [hidden]{display:none}, so any
+   element the script hides with .hidden would stay visible. That is what kept the sign-in
+   panel on screen after a successful login. Make [hidden] authoritative. */
+[hidden]{display:none !important}
 *{box-sizing:border-box;min-width:0}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);
@@ -102,7 +108,7 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px var(--acc
   background:#fff;transition:.15s}
 .sw input:checked + i{background:var(--accent)}
 .sw input:checked + i::after{transform:translateX(15px)}
-.note{font-size:11.5px;line-height:1.5;color:var(--fg3);margin-top:var(--s2)}
+.note{font-size:12px;line-height:1.55;color:var(--fg3);margin-top:var(--s2)}
 .note b{color:var(--fg2);font-weight:600}
 
 /* live weight bar - makes weighted ranking legible, which is the known UX failure mode */
@@ -165,10 +171,13 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px var(--acc
 .card .est{font-size:15px;font-weight:650}
 .card .of{font-size:11px;color:var(--fg3)}
 .card .l2{display:flex;gap:var(--s1);flex-wrap:wrap;margin-top:var(--s2)}
+.tag{color:var(--fg2)}
 .tag{font-size:10.5px;font-weight:550;color:var(--fg2);background:var(--surface2);
   border:1px solid var(--line);border-radius:5px;padding:1px 6px}
 .tag.warn{color:var(--warn);border-color:#4a3a12}
 .tag.dim{color:var(--fg3)}
+.sect > h3{color:var(--fg2)}
+.card .of{color:var(--fg2)}
 .meter{height:3px;background:var(--surface2)}
 .meter i{display:block;height:100%;background:linear-gradient(90deg,var(--accent-dim),var(--accent))}
 
@@ -243,6 +252,9 @@ dialog::backdrop{background:rgba(4,6,10,.86);backdrop-filter:blur(3px)}
   padding:4px 8px;font-size:11.5px;margin-left:4px}
 .mini:hover{border-color:var(--accent)}
 .mini.danger:hover{border-color:var(--bad);color:var(--bad)}
+.userchip{display:flex;align-items:center;gap:6px;padding-left:var(--s3);
+  border-left:1px solid var(--line);font-size:12.5px;color:var(--fg2)}
+.userchip b{color:var(--fg)}
 .who{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--fg2)}
 .who b{color:var(--fg)}
 .undoBar{display:flex;align-items:center;gap:var(--s3)}
@@ -380,6 +392,10 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
   <button class="btn icon" id="dens" title="Card size">▦</button>
   <button class="btn" id="exp" title="Export results as CSV">Export</button>
   <button class="btn icon" id="theme" title="Light / dark">◐</button>
+  <span class="userchip" id="userchip" hidden>
+    <span id="userName"></span>
+    <button class="btn icon" id="signout" title="Sign out">⏻</button>
+  </span>
 </div>
 
 <div class="gate" id="gate" hidden>
@@ -609,7 +625,9 @@ const api=async(p,o={})=>{
     // expired". Hijacking it was why a wrong password reported "signed out" - an error
     // that describes the wrong problem is worse than no error at all.
     if(r.status===401 && !p.startsWith('/api/auth/')){
-      TOKEN=''; localStorage.removeItem('facet-token'); showGate();
+      TOKEN=''; localStorage.removeItem('facet-token');
+      RES=[]; TOTAL=0; $('#view').innerHTML=''; $('#userchip').hidden=true;
+      setMode('login'); showGate('Your session expired — please sign in again.');
       throw new Error('Your session expired — please sign in again.');
     }
     throw new Error(apiError(body, r.status));
@@ -686,6 +704,9 @@ window.relax=()=>{$('#attrPct').value=0;$('#minQ').value=0;$('#ageMin').value=0;
 // DPR is capped at 1.5 here - the sharpness difference is marginal at this size, and a
 // 60-card page is the difference between roughly 0.9 MB and 1.3 MB on a phone. The detail
 // view uses full DPR, where the fidelity actually shows.
+// <img> cannot carry an Authorization header, so media takes the session token as a query
+// parameter. Same token, same lifetime - it just stops images being anonymously readable.
+function media(path){ return path + (path.includes('?')?'&':'?') + 't=' + encodeURIComponent(TOKEN); }
 function thumbPx(){
   const cols = innerWidth<=420?2:innerWidth<=820?3:Math.max(3,Math.round(innerWidth/DENS));
   const cssW = Math.ceil(innerWidth/cols);
@@ -698,7 +719,7 @@ function card(x,i){
   const liked=(x.feedback||[]).includes('like');
   const est=x.attractiveness==null?'—':x.attractiveness.toFixed(2);
   return `<article class="card" data-i="${i}">
-    <div class="ph"><img loading="lazy" decoding="async" src="/api/crop/${x.face_id}?size=${thumbPx()}"
+    <div class="ph"><img loading="lazy" decoding="async" src="${media('/api/crop/'+x.face_id+'?size='+thumbPx())}"
         onload="this.classList.add('on')" alt="Detected face"></div>
     <div class="rank">${Math.round(x.relevance*100)}%</div>
     <button class="star ${liked?'on':''}" data-fav="${x.face_id}" title="Favourite (F)">${liked?'★':'☆'}</button>
@@ -835,6 +856,7 @@ $('#gateForm').onsubmit=async e=>{
     $('#gErr').textContent=m;
   }finally{ btn.disabled=false; btn.textContent=MODE==='login'?'Sign in':'Create account'; }
 };
+$('#signout').onclick=()=>$('#logout').click();
 $('#logout').onclick=async()=>{
   try{ await api('/api/auth/logout',{method:'POST'}); }catch{}
   TOKEN=''; localStorage.removeItem('facet-token'); location.reload();
@@ -923,7 +945,7 @@ async function open(i){
   CUR=i; const x=RES[i]; if(!x) return;
   $('#dlg').showModal();
   const full=await api('/api/face/'+x.face_id);
-  const img=$('#dimg'); img.src='/api/image/'+x.image_id+'?max_px='+detailPx();
+  const img=$('#dimg'); img.src=media('/api/image/'+x.image_id+'?max_px='+detailPx());
   img.onload=()=>box(x,full);
   const b=full.predictions.beauty||{}, e=b.extra||{}, dist=b.distribution||[];
   const peak=dist.indexOf(Math.max(...dist));
@@ -1188,6 +1210,9 @@ async function boot(){
     ? `Signed in as <b>${who.user}</b>${who.is_admin?'<span class="rolechip">admin</span>':''}`
     : 'Open mode — <b>no account</b>. Create one for a private taste model.';
   $('#logout').style.display = who.user ? '' : 'none';
+  $('#userchip').hidden = !who.user;
+  $('#userName').innerHTML = who.user
+    ? `<b>${who.user}</b>${who.is_admin?'<span class="rolechip">admin</span>':''}` : '';
   $('#tAdmin').hidden = !who.is_admin;
   if(who.must_change_password){
     tab('admin');

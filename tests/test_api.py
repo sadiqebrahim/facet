@@ -377,3 +377,30 @@ def test_error_details_are_human_readable(client):
     ):
         d = client.post("/api/auth/register", json=payload).json()["detail"]
         assert expect in d, f"unhelpful message for {payload}: {d}"
+
+
+# ------------------------------------------------------- authentication surface
+
+def test_no_endpoint_leaks_face_data_without_a_session(client):
+    """Face crops, source images, predictions and stats were all anonymously readable.
+    A client-side gate is decoration; this is the actual boundary."""
+    client.post("/api/auth/register", json={"username": "boss", "password": "secret123"})
+    for method, path in [
+        ("get", "/api/stats"), ("get", "/api/face/1"),
+        ("get", "/api/crop/1"), ("get", "/api/image/1"),
+        ("get", "/api/searches"), ("get", "/api/index/status"),
+        ("get", "/api/preference"), ("get", "/api/admin/users"),
+    ]:
+        r = getattr(client, method)(path)
+        assert r.status_code == 401, f"{path} answered {r.status_code} with no credentials"
+    assert client.post("/api/search", json={"limit": 1}).status_code == 401
+    assert client.post("/api/index", json={"roots": ["/tmp"]}).status_code == 401
+
+
+def test_media_accepts_the_token_as_a_query_parameter(client):
+    """<img src> cannot set headers, so media takes ?t=<token> - the same token, not a
+    weaker side door."""
+    r = client.post("/api/auth/register",
+                    json={"username": "boss", "password": "secret123"}).json()
+    assert client.get(f"/api/crop/1?t={r['token']}").status_code in (200, 410)
+    assert client.get("/api/crop/1?t=not-a-real-token").status_code == 401

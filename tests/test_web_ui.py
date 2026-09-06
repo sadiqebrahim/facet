@@ -129,3 +129,37 @@ def test_account_creation_is_acknowledged(page):
 
 def test_sign_in_and_create_are_separate_visible_modes(page):
     assert 'id="mSignin"' in page and 'id="mCreate"' in page
+
+
+def test_hidden_attribute_is_authoritative(page):
+    """An author `display:` rule outranks the UA's [hidden]{display:none}. Without a global
+    override the sign-in panel stayed on screen after a successful login."""
+    assert "[hidden]{display:none !important}" in _style(page)
+
+
+def test_media_urls_carry_the_session_token(page):
+    """<img> cannot send an Authorization header, so crops/images must pass the token
+    another way - otherwise they are either broken or anonymously readable."""
+    js = _script(page)
+    assert "function media(" in js
+    assert "media('/api/crop/" in js and "media('/api/image/" in js
+
+
+def test_muted_text_meets_contrast_minimums(page):
+    """--fg3 carries the small explanatory notes, where legibility matters most."""
+    css = _style(page)
+    def lum(hx):
+        hx = hx.lstrip("#")
+        c = [int(hx[i:i+2], 16) / 255 for i in (0, 2, 4)]
+        c = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    import re as _re
+    fg3 = _re.search(r"--fg3:\s*(#[0-9a-fA-F]{6})", css).group(1)
+    surface = _re.search(r"--surface:\s*(#[0-9a-fA-F]{6})", css).group(1)
+    la, lb = lum(fg3), lum(surface)
+    ratio = (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+    assert ratio >= 4.5, f"muted text {fg3} on {surface} is {ratio:.2f}:1, below WCAG AA"
+
+
+def test_sign_out_is_reachable_from_the_top_bar(page):
+    assert 'id="signout"' in page and 'id="userchip"' in page

@@ -421,7 +421,7 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
         return {"name": "Facet", "disclaimer": DISCLAIMER}
 
     @app.get("/api/stats")
-    def stats():
+    def stats(user: str = Depends(current_user)):
         s = db().stats()
         s["ready"] = s["faces"] > 0
         s["has_predictions"] = s["predictions"] > 0
@@ -457,7 +457,7 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
         return out
 
     @app.get("/api/face/{face_id}")
-    def face(face_id: int):
+    def face(face_id: int, user: str = Depends(current_user)):
         row = db().conn.execute(
             "SELECT f.*, i.path, i.width, i.height FROM faces f "
             "JOIN images i ON i.id=f.image_id WHERE f.id=?", (face_id,)).fetchone()
@@ -480,16 +480,35 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
         return out
 
     # ----------------------------------------------------------------- media
+    #
+    # A browser <img src="..."> cannot attach an Authorization header, so media accepts the
+    # session token as a query parameter as well. It is the same token with the same
+    # lifetime - the point is that media stops being anonymously readable, which it was.
+
+    def media_user(authorization: str | None = Header(default=None),
+                   t: str | None = Query(default=None)) -> str:
+        acc = accounts()
+        if acc.count() == 0:
+            return "default"
+        token = t
+        if not token and authorization and authorization.lower().startswith("bearer "):
+            token = authorization[7:].strip()
+        u = acc.resolve(token)
+        if u is None:
+            raise HTTPException(401, "sign in to view images")
+        return u
 
     @app.get("/api/image/{image_id}")
-    def image(image_id: int, max_px: int = Query(1600, ge=64, le=4096)):
+    def image(image_id: int, max_px: int = Query(1600, ge=64, le=4096),
+              user: str = Depends(media_user)):
         r = db().conn.execute("SELECT path FROM images WHERE id=?", (image_id,)).fetchone()
         if r is None:
             raise HTTPException(404, "no such image")
         return _encode(_load_scaled(r["path"], max_px))
 
     @app.get("/api/crop/{face_id}")
-    def crop(face_id: int, size: int = Query(256, ge=32, le=1024), margin: float = 0.4):
+    def crop(face_id: int, size: int = Query(256, ge=32, le=1024), margin: float = 0.4,
+             user: str = Depends(media_user)):
         import cv2
         r = db().conn.execute(
             "SELECT f.x1,f.y1,f.x2,f.y2,i.path FROM faces f JOIN images i ON i.id=f.image_id "
@@ -506,7 +525,7 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
     # --------------------------------------------------------------- indexing
 
     @app.post("/api/index")
-    def start_index(req: IndexRequest):
+    def start_index(req: IndexRequest, user: str = Depends(current_user)):
         for r in req.roots:
             if not Path(r).expanduser().is_dir():
                 raise HTTPException(400, f"not a directory: {r}")
@@ -515,7 +534,7 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
                          req.predict_age, req.min_quality, req.age_limit)
 
     @app.get("/api/index/status")
-    def index_status():
+    def index_status(user: str = Depends(current_user)):
         with job.lock:
             s = dict(job.state)
         s["running"] = job.running()
@@ -552,16 +571,16 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
         return {"pending": db().pending_feedback(user)}
 
     @app.get("/api/searches")
-    def list_searches():
+    def list_searches(user: str = Depends(current_user)):
         return db().list_saved_searches()
 
     @app.post("/api/searches")
-    def save_search(req: SaveSearchRequest):
+    def save_search(req: SaveSearchRequest, user: str = Depends(current_user)):
         db().save_search(req.name, req.spec)
         return {"ok": True}
 
     @app.delete("/api/searches/{name}")
-    def delete_search(name: str):
+    def delete_search(name: str, user: str = Depends(current_user)):
         db().delete_saved_search(name)
         return {"ok": True}
 
