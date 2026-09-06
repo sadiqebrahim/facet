@@ -116,6 +116,45 @@ main{padding:var(--s5) var(--s5) 64px;max-width:1800px}
   padding:2px 8px;border-radius:20px;font-weight:650}
 .sect .hr{height:1px;background:var(--line);margin:var(--s2) 0}
 .lbl{font-size:12px;color:var(--fg2);font-weight:550}
+/* --- form controls (restored: an over-broad block replacement had removed these) --- */
+.f{display:flex;align-items:center;gap:var(--s2);min-height:26px}
+.f > label{flex:1;font-size:13px;color:var(--fg2);font-weight:500;cursor:pointer}
+.f input[type=number]{width:64px;background:var(--surface);border:1px solid var(--line2);
+  border-radius:var(--r1);padding:7px 8px;text-align:center;font-variant-numeric:tabular-nums}
+.f select{flex:1;background:var(--surface);border:1px solid var(--line2);
+  border-radius:var(--r1);padding:8px 10px;color:var(--fg)}
+.f input[type=text],input[type=text].wide,select.wide{background:var(--surface);
+  border:1px solid var(--line2);border-radius:var(--r1);padding:9px 11px;color:var(--fg)}
+.f input:focus,.f select:focus,input[type=text]:focus,select:focus{outline:none;
+  border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.num{min-width:44px;text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums;
+  color:var(--fg);font-weight:600}
+
+/* Sliders need both vendor trees - Firefox ignores the -webkit- pseudo-elements. */
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;
+  width:100%;height:20px;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:3px;background:var(--line2)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;
+  margin-top:-5.5px;border-radius:50%;background:var(--accent);
+  border:2px solid var(--surface);box-shadow:var(--shadow)}
+input[type=range]::-moz-range-track{height:5px;border-radius:3px;background:var(--line2);border:0}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;
+  background:var(--accent);border:2px solid var(--surface);box-shadow:var(--shadow)}
+input[type=range]::-moz-range-progress{height:5px;border-radius:3px;background:var(--accent)}
+input[type=range]:focus{outline:none}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--accent-dim)}
+input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px var(--accent-dim)}
+
+/* The skin must not intercept the click - that is what stopped every toggle working. */
+.sw{position:relative;width:38px;height:22px;flex:none;cursor:pointer;display:inline-block}
+.sw input{position:absolute;inset:0;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;z-index:2}
+.sw i{position:absolute;inset:0;background:var(--line2);border-radius:20px;
+  transition:background .16s;pointer-events:none}
+.sw i::after{content:"";position:absolute;left:2px;top:2px;width:18px;height:18px;
+  border-radius:50%;background:#fff;transition:transform .16s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw input:checked + i{background:var(--accent)}
+.sw input:checked + i::after{transform:translateX(16px)}
+.sw input:focus-visible + i{box-shadow:0 0 0 3px var(--accent-dim)}
 .wide{width:100%}
 .unit{font-size:11.5px;color:var(--fg3)}
 .sep{color:var(--fg3)}

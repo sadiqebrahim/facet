@@ -246,3 +246,12 @@ def test_model_status_panel_exists(page):
     js = _script(page)
     assert 'id="modelSect"' in page
     assert "async function modelStatus(" in js and "/api/models" in js
+
+
+def test_core_form_styles_are_present(page):
+    """A block replacement once removed .f, .num, .sw and the range rules wholesale, which
+    would have rendered the whole panel as unstyled browser defaults. Cheap to assert."""
+    css = _style(page)
+    for rule in (".f{", ".num{", ".sw{", ".sw i{", "input[type=range]{",
+                 "::-moz-range-thumb", "::-webkit-slider-thumb"):
+        assert rule in css, f"missing core style: {rule}"
