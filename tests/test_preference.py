@@ -93,3 +93,16 @@ def test_status_explains_itself():
                                     -ax + rng.normal(0, .3, (n, 32)) if n > 2
                                     else np.zeros((0, 32)))
         assert expect.lower() in m.status().note.lower()
+
+
+def test_dislike_only_still_steers_the_ranking():
+    """Rejecting is far less effort than curating examples, so many users will only ever
+    press ✕. That must move the ranking, not do nothing."""
+    ax, rng = taste()
+    m = PreferenceModel(32).fit(np.zeros((0, 32)), ax + rng.normal(0, .2, (4, 32)))
+    assert m.method == "avoid"
+    assert m.alpha() > 0, "rejections alone must still influence ranking"
+    away = m.score(-ax + rng.normal(0, .1, (5, 32))).mean()
+    toward = m.score(ax + rng.normal(0, .1, (5, 32))).mean()
+    assert away > toward
+    assert "rejected" in m.status().note.lower()

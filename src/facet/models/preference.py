@@ -96,9 +96,13 @@ class PreferenceModel:
             self.w = np.linalg.solve(A, Xw.T @ y)
             self.b = float(-(X @ self.w).mean())
             self.method = "ridge"
-        elif self.like_centroid is not None:
+        elif self.like_centroid is not None or self.dislike_centroid is not None:
+            # Dislike-only is a first-class case, not an edge case: rejecting is far less
+            # effort than curating examples, so many users will only ever press ✕. With no
+            # likes we cannot say what they want, but "less like these" is still a real
+            # signal and must move the ranking.
             self.w = None
-            self.method = "centroid"
+            self.method = "centroid" if self.like_centroid is not None else "avoid"
         else:
             self.method = "none"
         return self
@@ -115,6 +119,8 @@ class PreferenceModel:
             if self.dislike_centroid is not None:
                 s = s - Xu @ self.dislike_centroid
             return s
+        if self.dislike_centroid is not None:
+            return -(Xu @ self.dislike_centroid)      # steer away from what was rejected
         return np.zeros(len(Xu))
 
     def alpha(self) -> float:
@@ -129,6 +135,10 @@ class PreferenceModel:
         n = self.n_likes + self.n_dislikes
         if self.method == "none":
             note = "Not taught yet. Add reference faces or start rating results."
+        elif self.method == "avoid":
+            note = (f"Steering away from {self.n_dislikes} rejected face"
+                    f"{'s' if self.n_dislikes != 1 else ''}. Like a few too and it can learn "
+                    f"what you DO want, not just what you don't.")
         elif n < 10:
             note = (f"Learning from {n} example{'s' if n != 1 else ''}. E14 found personal "
                     f"signal becomes reliable around 10 and solid by 100 - keep rating.")

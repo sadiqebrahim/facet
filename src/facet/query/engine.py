@@ -122,10 +122,14 @@ class SearchEngine:
         store = self.store()
         if store is None:
             return None
+        # Only COMMITTED judgements train the model. A judgement still inside its undo
+        # window hides the face from results but has not taught anything yet, so undoing
+        # it leaves no residue instead of requiring the model to unlearn.
+        import time as _time
         rows = list(self.index.conn.execute(
             "SELECT f.feature_row, fb.kind FROM feedback fb JOIN faces f ON f.id=fb.face_id "
-            "WHERE fb.user=? AND fb.kind IN ('like','dislike') AND f.feature_row IS NOT NULL",
-            (user,)))
+            "WHERE fb.user=? AND fb.kind IN ('like','dislike') AND f.feature_row IS NOT NULL "
+            "AND COALESCE(fb.commit_at,0) <= ?", (user, _time.time())))
         refs = self.index.references(user)
         dim = store.dim
         liked, disliked = [], []
@@ -194,21 +198,24 @@ class SearchEngine:
                    b.value beauty, b.confidence bconf, b.interval_lo, b.interval_hi,
                    b.extra bextra,
                    a.value age, g.value p_female, g.confidence gconf,
-                   d.group_id dup_group
+                   d.group_id dup_group, fb.kind my_verdict
             FROM faces f
             JOIN images i ON i.id = f.image_id
             LEFT JOIN predictions b ON b.face_id=f.id AND b.model='beauty'
             LEFT JOIN predictions a ON a.face_id=f.id AND a.model='age'
             LEFT JOIN predictions g ON g.face_id=f.id AND g.model='gender'
             LEFT JOIN duplicates d ON d.face_id=f.id AND d.kind='near'
+            LEFT JOIN feedback fb ON fb.face_id=f.id AND fb.user=?
+                 AND fb.kind IN ('dislike','hide')
             WHERE {' AND '.join(where)}
         """
-        rows = list(self.index.conn.execute(sql, params))
+        # the feedback join binds first, since it appears before the WHERE clause
+        rows = list(self.index.conn.execute(sql, [spec.personalisation.user, *params]))
 
         diag = {
             "candidates_before_filters": len(rows),
             "missing_age": 0, "missing_gender": 0, "missing_attractiveness": 0,
-            "excluded_ood": 0, "excluded_low_gender_confidence": 0,
+            "excluded_ood": 0, "hidden_by_you": 0, "excluded_low_gender_confidence": 0,
             "excluded_required_missing": 0, "collapsed_near_duplicates": 0,
         }
 
@@ -244,6 +251,9 @@ class SearchEngine:
         total_w = spec.total_weight()
 
         for r in rows:
+            if f.exclude_disliked and r["my_verdict"]:
+                diag["hidden_by_you"] += 1
+                continue
             extra = json.loads(r["bextra"]) if r["bextra"] else {}
             ood = bool(extra.get("ood", False))
             if f.exclude_ood and ood:

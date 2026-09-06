@@ -23,11 +23,12 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from pydantic import BaseModel
 
 from ..pipeline.db import Index
+from .auth import Accounts, valid_username
 from ..query.engine import BEAUTY_SOURCE_NOTE, SearchEngine
 from ..query.spec import QuerySpec
 
@@ -64,6 +65,22 @@ class FeedbackRequest(BaseModel):
     note: str | None = None
     user: str = "default"
     remove: bool = False
+    #: Seconds during which the judgement can be undone. The face leaves the results
+    #: immediately, but the preference model does not learn from it until this elapses -
+    #: so an undo inside the window leaves nothing to unlearn.
+    undo_seconds: float = 10.0
+
+
+class UndoRequest(BaseModel):
+    face_id: int
+    kind: str | None = None
+    user: str = "default"
+
+
+class Credentials(BaseModel):
+    username: str
+    password: str
+    display_name: str | None = None
 
 
 class ReferenceRequest(BaseModel):
@@ -195,6 +212,82 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
             local.db = Index(index_path)
         return local.db
 
+    def accounts() -> Accounts:
+        if getattr(local, "acc", None) is None:
+            local.acc = Accounts(db().conn)
+        return local.acc
+
+    def current_user(authorization: str | None = Header(default=None)) -> str:
+        """Resolve the caller.
+
+        Until the first account is created the app runs open, under the shared 'default'
+        user - so a fresh local install works without a login step. The moment anyone
+        registers, authentication becomes mandatory, because from then on there are
+        separate taste models to keep apart.
+        """
+        acc = accounts()
+        if acc.count() == 0:
+            return "default"
+        token = None
+        if authorization and authorization.lower().startswith("bearer "):
+            token = authorization[7:].strip()
+        user = acc.resolve(token)
+        if user is None:
+            raise HTTPException(401, "sign in to continue")
+        return user
+
+    # ------------------------------------------------------------------ auth
+
+    @app.get("/api/auth/status")
+    def auth_status(authorization: str | None = Header(default=None)):
+        acc = accounts()
+        token = authorization[7:].strip() if (
+            authorization and authorization.lower().startswith("bearer ")) else None
+        user = acc.resolve(token)
+        return {"accounts_exist": acc.count() > 0, "authenticated": user is not None,
+                "user": user, "open_mode": acc.count() == 0,
+                "note": ("No accounts yet - running in open mode under a shared profile. "
+                         "Create an account to get a taste model of your own."
+                         if acc.count() == 0 else "")}
+
+    @app.post("/api/auth/register")
+    def register(c: Credentials):
+        acc = accounts()
+        if not valid_username(c.username):
+            raise HTTPException(400, "username must be 2-32 chars: letters, digits, . _ -")
+        if len(c.password) < 6:
+            raise HTTPException(400, "password must be at least 6 characters")
+        if acc.exists(c.username):
+            raise HTTPException(409, "that username is taken")
+        first = acc.count() == 0
+        acc.create(c.username, c.password, c.display_name)
+        if first:
+            # Carry the open-mode profile over so a first-run user does not lose the
+            # preferences they taught before creating an account.
+            for t, col in (("feedback", "user"), ("reference_faces", "user")):
+                db().conn.execute(f"UPDATE {t} SET {col}=? WHERE {col}='default'",
+                                  (c.username,))
+            db().conn.commit()
+        return {"ok": True, "token": acc.start_session(c.username), "user": c.username,
+                "migrated_default_profile": first}
+
+    @app.post("/api/auth/login")
+    def login(c: Credentials):
+        acc = accounts()
+        if not acc.check(c.username, c.password):
+            raise HTTPException(401, "wrong username or password")
+        return {"ok": True, "token": acc.start_session(c.username), "user": c.username}
+
+    @app.post("/api/auth/logout")
+    def logout(authorization: str | None = Header(default=None)):
+        if authorization and authorization.lower().startswith("bearer "):
+            accounts().end_session(authorization[7:].strip())
+        return {"ok": True}
+
+    @app.get("/api/auth/me")
+    def me(user: str = Depends(current_user)):
+        return {"user": user, **accounts().info(user)}
+
     # ------------------------------------------------------------------ meta
 
     @app.get("/api/about")
@@ -219,14 +312,19 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
     # ---------------------------------------------------------------- search
 
     @app.post("/api/search")
-    def search(spec: dict[str, Any]):
+    def search(spec: dict[str, Any], user: str = Depends(current_user)):
+        # The caller does not get to choose whose profile is used: personalisation and the
+        # dislike filter both read per-user rows, so a client-supplied name would be a way
+        # to read someone else's taste.
+        spec = dict(spec)
+        spec["personalisation"] = {**(spec.get("personalisation") or {}), "user": user}
         try:
             q = QuerySpec.from_dict(spec)
         except Exception as e:  # noqa: BLE001
             raise HTTPException(400, f"bad query: {e}") from e
         resp = engine().search(q)
         out = resp.as_dict()
-        fb = db().feedback_for(spec.get("user", "default"))
+        fb = db().feedback_for(user)
         for r in out["results"]:
             r["feedback"] = fb.get(r["face_id"], [])
         out["disclaimer"] = DISCLAIMER
@@ -300,14 +398,32 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
     # --------------------------------------------------------- feedback / saved
 
     @app.post("/api/feedback")
-    def feedback(req: FeedbackRequest):
+    def feedback(req: FeedbackRequest, user: str = Depends(current_user)):
+        req.user = user
         if req.kind not in {"like", "dislike", "hide", "wrong"}:
             raise HTTPException(400, "kind must be like, dislike, hide or wrong")
         if req.remove:
             db().remove_feedback(req.face_id, req.kind, req.user)
-        else:
-            db().add_feedback(req.face_id, req.kind, req.user, req.note)
-        return {"ok": True, "feedback": db().feedback_for(req.user).get(req.face_id, [])}
+            return {"ok": True, "feedback": db().feedback_for(user).get(req.face_id, []),
+                    "commit_at": None, "undo_seconds": 0}
+        commit_at = db().add_feedback(req.face_id, req.kind, req.user, req.note,
+                                      undo_seconds=req.undo_seconds)
+        return {"ok": True, "feedback": db().feedback_for(user).get(req.face_id, []),
+                "commit_at": commit_at, "undo_seconds": req.undo_seconds,
+                "note": ("hidden from results now; it starts shaping your taste model in "
+                         f"{req.undo_seconds:g}s unless you undo")}
+
+    @app.post("/api/feedback/undo")
+    def undo(req: UndoRequest, user: str = Depends(current_user)):
+        """Reverse a judgement: the face returns to results and, if still inside the undo
+        window, the preference model never saw it."""
+        n = db().undo_feedback(req.face_id, user, req.kind)
+        return {"ok": True, "removed": n,
+                "feedback": db().feedback_for(user).get(req.face_id, [])}
+
+    @app.get("/api/feedback/pending")
+    def pending(user: str = Depends(current_user)):
+        return {"pending": db().pending_feedback(user)}
 
     @app.get("/api/searches")
     def list_searches():
@@ -350,7 +466,7 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
         return _enc
 
     @app.get("/api/preference")
-    def preference(user: str = "default"):
+    def preference(user: str = Depends(current_user)):
         eng = engine()
         pm = eng.preference_model(user)
         refs = [{"id": r["id"], "path": r["path"], "kind": r["kind"]}
@@ -371,7 +487,8 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
         return out
 
     @app.post("/api/preference/references")
-    def add_references(req: ReferenceRequest):
+    def add_references(req: ReferenceRequest, user: str = Depends(current_user)):
+        req.user = user
         import cv2
         if req.kind not in {"like", "dislike"}:
             raise HTTPException(400, "kind must be like or dislike")
@@ -405,12 +522,12 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
                 "total_references": len(db().references(req.user))}
 
     @app.delete("/api/preference/references/{ref_id}")
-    def delete_reference(ref_id: int, user: str = "default"):
+    def delete_reference(ref_id: int, user: str = Depends(current_user)):
         db().delete_reference(ref_id, user)
         return {"ok": True}
 
     @app.post("/api/preference/reset")
-    def reset_preference(user: str = "default"):
+    def reset_preference(user: str = Depends(current_user)):
         n = db().clear_references(user)
         db().conn.execute("DELETE FROM feedback WHERE user=? AND kind IN ('like','dislike')",
                           (user,))
@@ -420,7 +537,10 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
     # ----------------------------------------------------------------- export
 
     @app.post("/api/export")
-    def export(spec: dict[str, Any], fmt: str = Query("csv", pattern="^(csv|json)$")):
+    def export(spec: dict[str, Any], fmt: str = Query("csv", pattern="^(csv|json)$"),
+               user: str = Depends(current_user)):
+        spec = {**spec, "personalisation": {**(spec.get("personalisation") or {}),
+                                            "user": user}}
         resp = engine().search(QuerySpec.from_dict(spec))
         if fmt == "json":
             return JSONResponse({"disclaimer": DISCLAIMER, **resp.as_dict()})

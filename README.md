@@ -148,6 +148,21 @@ dropped them from positions **1–8 to 257–333**. The blend is capped so the p
 never fully drops out — E14 found a personal model trained alone is catastrophic at cold
 start. Details: [`docs/APP.md`](docs/APP.md#personalisation--teaching-it-your-taste).
 
+## Accounts, undo, and reaching it from your phone
+
+```bash
+python scripts/serve.py --host 0.0.0.0 --index facet.db --features feats/
+```
+
+Prints every address the machine is reachable on (handy behind a VPN) and warns loudly if you
+expose it without accounts. **Create an account first** — each one gets its own likes,
+rejects and reference faces, and the server overrides any client-supplied user so profiles
+cannot leak between accounts.
+
+Rejecting a face removes it from your results **immediately**, but the model only learns from
+it after the **undo window** (default 10 s). Undo inside that window and the model never saw
+it — nothing to unlearn.
+
 ## Documentation
 
 | Document | Contents |

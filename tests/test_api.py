@@ -20,7 +20,21 @@ from facet.pipeline.db import Index  # noqa: E402
 
 @pytest.fixture
 def client(tmp_path):
+    """A synthetic index WITH a real feature store.
+
+    The preference model is fitted over cached embeddings, so a fixture without a feature
+    store silently disables personalisation and any test of it would pass vacuously.
+    """
+    import numpy as np
+
+    from facet.pipeline.store import FeatureStore
+
     db = tmp_path / "api.db"
+    feats = tmp_path / "feats"
+    ENC, CROP, DIM = "test-enc", "test-crop", 16
+    store = FeatureStore(feats, ENC, CROP, dim=DIM)
+    rng = np.random.default_rng(0)
+    store.append(rng.normal(size=(3, DIM)).astype(np.float32))
     ix = Index(db)
     for i, (beauty, age, pf, ood) in enumerate([
         (4.5, 30, 0.99, False), (2.1, 55, 0.02, False), (4.2, 28, 0.95, True),
@@ -30,7 +44,7 @@ def client(tmp_path):
         fid = ix.insert_face(image_id=iid, face_idx=0, x1=10, y1=10, x2=110, y2=110,
                              det_score=0.9, face_px=100, quality=0.6, feature_row=i,
                              quality_json='{"blur": 500.0}',
-                             encoder_version="e", crop_version="c")
+                             encoder_version=ENC, crop_version=CROP)
         ix.upsert_predictions([
             {"face_id": fid, "model": "beauty", "model_version": "b1", "value": beauty,
              "confidence": None if ood else 0.8, "std": 0.3,
@@ -42,7 +56,7 @@ def client(tmp_path):
              "confidence": 0.95},
         ])
     ix.close()
-    return TestClient(create_app(str(db), str(tmp_path / "feats")))
+    return TestClient(create_app(str(db), str(feats)))
 
 
 def test_about_carries_the_disclaimer(client):
@@ -185,3 +199,91 @@ def test_reference_rejects_bad_kind(client):
 def test_search_reports_personalisation_state(client):
     r = client.post("/api/search", json={"personalisation": {"enabled": True}, "limit": 3}).json()
     assert "personalisation_alpha" in r["diagnostics"]
+
+
+# ------------------------------------------------------------ undo & accounts
+
+def test_feedback_has_an_undo_window_before_it_teaches(client):
+    fid = client.post("/api/search", json={"limit": 1}).json()["results"][0]["face_id"]
+    r = client.post("/api/feedback",
+                    json={"face_id": fid, "kind": "dislike", "undo_seconds": 30}).json()
+    assert r["commit_at"] is not None
+    assert client.get("/api/feedback/pending").json()["pending"], "should be undoable"
+    # inside the window the model has learned nothing
+    assert client.get("/api/preference").json()["trained"] is False
+
+
+def test_undo_restores_the_face_and_leaves_no_trace(client):
+    fid = client.post("/api/search", json={"limit": 1}).json()["results"][0]["face_id"]
+    client.post("/api/feedback", json={"face_id": fid, "kind": "dislike", "undo_seconds": 30})
+    hidden = [r["face_id"] for r in client.post("/api/search", json={"limit": 50}).json()["results"]]
+    assert fid not in hidden, "a rejected face must leave the results at once"
+    client.post("/api/feedback/undo", json={"face_id": fid})
+    back = [r["face_id"] for r in client.post("/api/search", json={"limit": 50}).json()["results"]]
+    assert fid in back, "undo must bring it back"
+    assert client.get("/api/preference").json()["trained"] is False
+
+
+def test_zero_window_commits_immediately(client):
+    fid = client.post("/api/search", json={"limit": 1}).json()["results"][0]["face_id"]
+    client.post("/api/feedback", json={"face_id": fid, "kind": "like", "undo_seconds": 0})
+    assert client.get("/api/feedback/pending").json()["pending"] == []
+    assert client.get("/api/preference").json()["trained"] is True
+
+
+def test_disliked_faces_are_hidden_and_counted(client):
+    ids = [r["face_id"] for r in client.post("/api/search", json={"limit": 3}).json()["results"]]
+    client.post("/api/feedback", json={"face_id": ids[0], "kind": "dislike", "undo_seconds": 0})
+    r = client.post("/api/search", json={"limit": 50}).json()
+    assert ids[0] not in [x["face_id"] for x in r["results"]]
+    assert r["diagnostics"]["hidden_by_you"] == 1
+    # ...unless explicitly asked for
+    r2 = client.post("/api/search",
+                     json={"filters": {"exclude_disliked": False}, "limit": 50}).json()
+    assert ids[0] in [x["face_id"] for x in r2["results"]]
+
+
+def test_open_mode_until_the_first_account(client):
+    s = client.get("/api/auth/status").json()
+    assert s["open_mode"] is True and s["accounts_exist"] is False
+
+
+def test_registration_then_auth_is_required(client):
+    r = client.post("/api/auth/register",
+                    json={"username": "u1", "password": "secret123"}).json()
+    assert r["token"]
+    assert client.post("/api/search", json={"limit": 1}).status_code == 401
+    ok = client.post("/api/search", json={"limit": 1},
+                     headers={"Authorization": f"Bearer {r['token']}"})
+    assert ok.status_code == 200
+
+
+def test_credentials_are_validated(client):
+    client.post("/api/auth/register", json={"username": "u1", "password": "secret123"})
+    assert client.post("/api/auth/register",
+                       json={"username": "u1", "password": "secret123"}).status_code == 409
+    assert client.post("/api/auth/register",
+                       json={"username": "x", "password": "secret123"}).status_code == 400
+    assert client.post("/api/auth/register",
+                       json={"username": "ok", "password": "123"}).status_code == 400
+    assert client.post("/api/auth/login",
+                       json={"username": "u1", "password": "wrong"}).status_code == 401
+
+
+def test_users_cannot_read_each_others_taste(client):
+    a = client.post("/api/auth/register", json={"username": "aaa", "password": "secret123"}).json()
+    b = client.post("/api/auth/register", json={"username": "bbb", "password": "secret123"}).json()
+    ha = {"Authorization": f"Bearer {a['token']}"}
+    hb = {"Authorization": f"Bearer {b['token']}"}
+    fid = client.post("/api/search", json={"limit": 1}, headers=ha).json()["results"][0]["face_id"]
+    client.post("/api/feedback", json={"face_id": fid, "kind": "dislike", "undo_seconds": 0},
+                headers=ha)
+    assert fid not in [r["face_id"] for r in
+                       client.post("/api/search", json={"limit": 50}, headers=ha).json()["results"]]
+    assert fid in [r["face_id"] for r in
+                   client.post("/api/search", json={"limit": 50}, headers=hb).json()["results"]]
+    # and a client cannot borrow another profile by naming it in the request body
+    spoof = client.post("/api/search",
+                        json={"limit": 50, "personalisation": {"user": "aaa"}},
+                        headers=hb).json()
+    assert fid in [r["face_id"] for r in spoof["results"]], "server must override the user"

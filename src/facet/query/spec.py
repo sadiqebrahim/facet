@@ -88,6 +88,10 @@ class Filters:
     min_face_px: float = 0.0
     min_det_score: float = 0.0
     exclude_ood: bool = False
+    #: Faces the user has rejected disappear from results. They still train the preference
+    #: model - a rejection is information, not just a hide - but nobody wants to keep
+    #: scrolling past a face they already said no to.
+    exclude_disliked: bool = True
     exclude_near_duplicates: bool = True
     paths_like: str | None = None
 

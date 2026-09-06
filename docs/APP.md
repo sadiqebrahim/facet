@@ -65,6 +65,69 @@ The research phase's conclusions are visible in the UI rather than buried in a d
 - Gender is described as **"presenting as"**, and strict filtering reports how many faces it
   excluded.
 
+## Accounts
+
+With **no accounts**, the app runs open under a shared profile — a fresh local install works
+without a login step. The moment anyone registers, **authentication becomes mandatory**,
+because from then on there are separate taste models to keep apart. The first account
+inherits whatever the open profile had already learned, so nothing is lost.
+
+Each account keeps its own likes, rejects and reference faces. That is not a nicety: E14's
+result is that preference is personal, so sharing one bucket between people would blend
+incompatible tastes and quietly degrade everyone's ranking. **The server overrides any
+client-supplied user** on every request — a browser cannot read another account's profile by
+naming it in the request body, and there is a test asserting exactly that.
+
+Passwords are PBKDF2-SHA256 with a per-user salt and a constant-time comparison; sessions are
+random 256-bit tokens with a 30-day expiry.
+
+**There is no TLS.** On an untrusted network, passwords and tokens cross the wire in the
+clear. Put it behind a VPN or an HTTPS reverse proxy — which is what `serve.py` prints when
+you bind beyond localhost.
+
+## Reaching it from another device
+
+```bash
+python scripts/serve.py --host 0.0.0.0 --index facet.db --features feats/
+```
+
+It prints every address the machine is reachable on, so a VPN interface is easy to pick out,
+and warns before doing anything risky:
+
+```
+  Binding to 0.0.0.0 — reachable from other machines on this network.
+  Face embeddings are biometric data (docs/LICENSING.md §4).
+  ⚠ NO ACCOUNTS EXIST, so the app is in open mode: anyone who can reach
+    this port gets full access. Create an account in the UI to require a login.
+  There is no TLS here: on an untrusted network, passwords and session
+  tokens cross the wire in the clear. Use a VPN or an HTTPS proxy.
+```
+
+**Create an account before binding to `0.0.0.0`.**
+
+## Undo, and when judgements take effect
+
+A like or reject does two different things at two different times:
+
+| | when |
+|---|---|
+| the face leaves your results | **immediately** — the point of rejecting is not to see it again |
+| the preference model learns from it | **after the undo window** (default 10 s, adjustable 0–60 s) |
+
+That split is the whole design. Undoing inside the window means the model **never saw** the
+judgement, so there is nothing to unlearn — as opposed to teaching it something and then
+trying to teach the opposite. The toast shows a countdown ring and an **Undo** button;
+undoing restores the face to results at once. Set the window to 0 to commit immediately.
+
+## Browser support
+
+Tested against Chromium and Firefox feature sets. Range sliders carry both `-webkit-` and
+`-moz-` pseudo-element rules — Firefox ignores the WebKit tree entirely and would otherwise
+render default platform sliders — and scrollbar styling uses `scrollbar-width` /
+`scrollbar-color` alongside `::-webkit-scrollbar`. `<dialog>`, `aspect-ratio`, `dvh` and
+`backdrop-filter` are all supported in current Firefox and Chromium; the translucent overlays
+keep an opaque-enough fallback colour where `backdrop-filter` is unavailable.
+
 ## Responsive behaviour
 
 One layout, three tiers, and the important part is not the column count — it is that **every
@@ -102,10 +165,9 @@ where fidelity actually shows.
 ## Limitations
 
 - Single-user, single-process; no auth, because it binds to localhost by design.
-- Feedback is stored but **not yet used for ranking**. E14 showed personalisation only pays
-  off with a diverse rater pool, and then only as a residual model gated on population fit;
-  wiring that in is Phase 12.
-- Batch selection and a full-screen viewer are not implemented.
+- Batch selection is not implemented.
+- Sessions have no refresh; after 30 days you sign in again.
+- Undo is a single-step, most-recent-action affair — there is no history stack.
 - The UI was verified by static analysis (JS syntax, every referenced element id, every API
   path returning 200, balanced CSS at every breakpoint) and by exercising the API directly.
   **It has not been viewed in a real browser** — the Claude in Chrome extension was not

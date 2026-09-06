@@ -55,8 +55,10 @@ button{cursor:pointer}
 .shell{display:grid;grid-template-columns:var(--sidebar) 1fr;min-height:calc(100vh - 56px)}
 aside{background:var(--surface);border-right:1px solid var(--line);
   position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto;padding:var(--s4)}
+aside{scrollbar-width:thin;scrollbar-color:var(--line2) transparent}  /* Firefox */
 aside::-webkit-scrollbar{width:9px}
 aside::-webkit-scrollbar-thumb{background:var(--line2);border-radius:9px}
+.panel{scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
 main{padding:var(--s5) var(--s5) 64px;max-width:1800px}
 
 /* ---------- sidebar ---------- */
@@ -79,10 +81,19 @@ main{padding:var(--s5) var(--s5) 64px;max-width:1800px}
   border-radius:var(--r1);padding:6px 8px}
 .f input[type=text]{flex:1;background:var(--surface2);border:1px solid var(--line);
   border-radius:var(--r1);padding:7px 9px}
+/* Range styling needs both vendor trees - Firefox ignores the -webkit- pseudo-elements
+   entirely and would otherwise render a default platform slider. */
 input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;flex:1;height:18px}
 input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:3px;background:var(--line2)}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-5px;
   border-radius:50%;background:var(--accent);border:2px solid var(--surface);box-shadow:var(--shadow)}
+input[type=range]::-moz-range-track{height:4px;border-radius:3px;background:var(--line2);border:0}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+  background:var(--accent);border:2px solid var(--surface);box-shadow:var(--shadow)}
+input[type=range]::-moz-range-progress{height:4px;border-radius:3px;background:var(--accent-dim)}
+input[type=range]:focus{outline:none}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--accent-dim)}
+input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px var(--accent-dim)}
 .num{min-width:42px;text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--fg)}
 .sw{position:relative;width:34px;height:19px;flex:none}
 .sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
@@ -141,7 +152,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .card .ph{aspect-ratio:1;background:var(--surface2);position:relative;overflow:hidden}
 .card .ph img{width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .25s}
 .card .ph img.on{opacity:1}
-.rank{position:absolute;top:var(--s2);left:var(--s2);background:rgba(8,10,14,.82);
+.rank{position:absolute;top:var(--s2);left:var(--s2);background:rgba(8,10,14,.88);
   color:#fff;font-size:11.5px;font-weight:650;padding:3px 8px;border-radius:20px;
   backdrop-filter:blur(6px);font-variant-numeric:tabular-nums}
 .star{position:absolute;top:var(--s2);right:var(--s2);width:28px;height:28px;border:0;
@@ -170,14 +181,70 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .state h2{font-size:19px;margin-bottom:var(--s2)}
 .state p{color:var(--fg2);margin:0 0 var(--s5);line-height:1.6;font-size:13.5px}
 
+/* ---------- accounts ---------- */
+let MODE='login';
+function showGate(msg){ $('#gate').hidden=false; if(msg) $('#gErr').textContent=msg; }
+function hideGate(){ $('#gate').hidden=true; $('#gErr').textContent=''; }
+$('#gSwap').onclick=()=>{ MODE=MODE==='login'?'register':'login';
+  $('#gGo').textContent=MODE==='login'?'Sign in':'Create account';
+  $('#gSwap').textContent=MODE==='login'?'Create an account instead':'I already have an account';
+  $('#gPass').autocomplete=MODE==='login'?'current-password':'new-password';
+  $('#gErr').textContent=''; };
+$('#gateForm').onsubmit=async e=>{
+  e.preventDefault(); $('#gErr').textContent='';
+  try{
+    const r=await api('/api/auth/'+MODE,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({username:$('#gUser').value.trim(),password:$('#gPass').value})});
+    TOKEN=r.token; localStorage.setItem('facet-token',TOKEN);
+    hideGate();
+    if(r.migrated_default_profile) toast('Your existing preferences moved to this account');
+    await boot();
+  }catch(err){ $('#gErr').textContent=err.message.replace(/^\{.*"detail":"?/,'').replace(/"?\}$/,''); }
+};
+$('#logout').onclick=async()=>{
+  try{ await api('/api/auth/logout',{method:'POST'}); }catch{}
+  TOKEN=''; localStorage.removeItem('facet-token'); location.reload();
+};
+
+/* ---------- undo ---------- */
+let UNDO=null;
+function undoSecs(){ return +$('#undoSec').value; }
+function offerUndo(faceId, kind, secs){
+  clearTimeout(UNDO?.t); clearInterval(UNDO?.i);
+  const t=$('#toast'); const label=kind==='like'?'Liked':'Rejected';
+  const total=Math.max(secs,0.001); let left=secs;
+  t.innerHTML=`<span class="undoBar">
+    <svg class="undoRing" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="9"/>
+      <circle class="fg" cx="12" cy="12" r="9" stroke-dasharray="56.5" stroke-dashoffset="0"/></svg>
+    <span>${label} — learning in <b id="undoLeft">${secs}</b>s</span>
+    <button id="undoBtn">Undo</button></span>`;
+  t.classList.add('on');
+  const ring=t.querySelector('.fg');
+  UNDO={faceId,kind,
+    i:setInterval(()=>{ left=Math.max(0,left-0.1);
+      const el=t.querySelector('#undoLeft'); if(el) el.textContent=Math.ceil(left);
+      if(ring) ring.style.strokeDashoffset=String(56.5*(1-left/total));
+    },100),
+    t:setTimeout(()=>{ clearInterval(UNDO.i); t.classList.remove('on'); UNDO=null; run(); }, secs*1000)};
+  t.querySelector('#undoBtn').onclick=async()=>{
+    clearTimeout(UNDO.t); clearInterval(UNDO.i); t.classList.remove('on');
+    await api('/api/feedback/undo',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({face_id:faceId,kind})});
+    UNDO=null; toast('Reversed — nothing was learned'); await taste(); run();
+  };
+}
+
 /* ---------- taught preference ---------- */
 async function judge(id,kind){
-  await api('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({face_id:id,kind})});
-  if(!$('#pOn').checked){ $('#pOn').checked=true; toast('Personalisation on — learning from you'); }
-  else toast(kind==='like'?'More like this':'Fewer like this');
-  await taste();
-  run();                     // re-rank immediately so the adjustment is visible
+  const secs=undoSecs();
+  const r=await api('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({face_id:id,kind,undo_seconds:secs})});
+  if(!$('#pOn').checked) $('#pOn').checked=true;
+  // Remove it from view at once - the point of rejecting is not to see it again - while
+  // the model only learns once the undo window closes.
+  RES=RES.filter(x=>x.face_id!==id); TOTAL=Math.max(0,TOTAL-1); render(LASTDIAG);
+  if(secs>0) offerUndo(id,kind,secs);
+  else { toast(kind==='like'?'More like this':'Fewer like this'); await taste(); run(); }
 }
 async function taste(){
   let d; try{ d=await api('/api/preference'); }catch{ return; }
@@ -214,6 +281,8 @@ $('#resetPref').onclick=async()=>{ if(!confirm('Forget everything Facet has lear
 $('#pOn').onchange=()=>{taste();run();};
 $('#pStr').oninput=()=>{$('#pStrV').textContent=(+$('#pStr').value).toFixed(2).replace(/0$/,'')+'×';taste();};
 $('#pStr').onchange=()=>run();
+$('#undoSec').oninput=()=>{const v=undoSecs();
+  $('#undoSecV').textContent=v===0?'off':v+'s'; localStorage.setItem('facet-undo',v);};
 
 /* ---------- detail ---------- */
 dialog{border:0;padding:0;background:transparent;max-width:none;max-height:none;width:100%;height:100%}
@@ -250,6 +319,22 @@ dialog::backdrop{background:rgba(4,6,10,.86);backdrop-filter:blur(3px)}
 .acts{display:flex;gap:var(--s2)}
 .acts .btn{flex:1;text-align:center}
 
+.gate{position:fixed;inset:0;z-index:200;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;padding:var(--s4)}
+.gatebox{width:min(360px,100%);display:flex;flex-direction:column;gap:var(--s3);
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r3);
+  padding:var(--s5);box-shadow:var(--shadow)}
+.gatebox input{background:var(--surface2);border:1px solid var(--line);
+  border-radius:var(--r1);padding:11px 12px;font-size:15px}
+.who{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--fg2)}
+.who b{color:var(--fg)}
+.undoBar{display:flex;align-items:center;gap:var(--s3)}
+.undoBar button{background:var(--accent);color:#08111f;border:0;border-radius:6px;
+  padding:5px 12px;font-weight:650;font-size:12.5px}
+.undoRing{width:22px;height:22px;flex:none}
+.undoRing circle{fill:none;stroke-width:3}
+.undoRing .bg{stroke:var(--line2)}
+.undoRing .fg{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset .2s linear}
 .toast{position:fixed;bottom:var(--s5);left:50%;transform:translateX(-50%) translateY(80px);
   background:var(--raised);border:1px solid var(--line2);border-radius:var(--r2);
   padding:10px 18px;font-size:13px;box-shadow:var(--shadow);opacity:0;
@@ -344,6 +429,7 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
   .f select,.f input[type=text]{padding:10px}
   input[type=range]{height:30px}
   input[type=range]::-webkit-slider-thumb{width:20px;height:20px;margin-top:-8px}
+  input[type=range]::-moz-range-thumb{width:20px;height:20px}
   .sw{width:44px;height:26px}
   .sw i::after{width:22px;height:22px}
   .sw input:checked + i::after{transform:translateX(18px)}
@@ -379,6 +465,19 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
   <button class="btn icon" id="theme" title="Light / dark">◐</button>
 </div>
 
+<div class="gate" id="gate" hidden>
+  <form class="gatebox" id="gateForm">
+    <div class="brand" style="font-size:18px;margin-bottom:4px"><span class="dot"></span> Facet</div>
+    <p class="note" id="gateNote">Sign in to use your own taste model.</p>
+    <input type="text" id="gUser" placeholder="Username" autocomplete="username" required>
+    <input type="password" id="gPass" placeholder="Password" autocomplete="current-password" required>
+    <button class="btn primary" type="submit" id="gGo">Sign in</button>
+    <button class="btn" type="button" id="gSwap">Create an account instead</button>
+    <p class="note" id="gErr" style="color:var(--bad)"></p>
+    <p class="note">Each account keeps its own likes, rejects and reference faces, so one
+      person's taste never bleeds into another's.</p>
+  </form>
+</div>
 <div class="backdrop" id="backdrop"></div>
 <div class="shell">
 <aside id="aside">
@@ -485,6 +584,18 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
     </div>
 
     <div class="sect">
+      <h3>Account</h3>
+      <div class="who" id="who">Open mode — no account</div>
+      <div class="f" style="margin-top:8px"><label>Undo window</label>
+        <input type="range" id="undoSec" min="0" max="60" step="1" value="10">
+        <span class="num" id="undoSecV">10s</span></div>
+      <p class="note">A like or reject hides the face straight away, but only starts shaping
+        your model after this delay — so an undo inside the window leaves no trace.
+        Set to 0 to apply immediately.</p>
+      <div class="f"><button class="btn" id="logout" style="flex:1">Sign out</button></div>
+    </div>
+
+    <div class="sect">
       <h3>Saved searches</h3>
       <div class="f"><select id="saved"><option value="">— none selected —</option></select></div>
       <div class="f"><button class="btn" id="save" style="flex:1">Save current</button>
@@ -530,7 +641,12 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
 
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const api=async(p,o)=>{const r=await fetch(p,o);
+let TOKEN=localStorage.getItem('facet-token')||'';
+const api=async(p,o={})=>{
+  const h={...(o.headers||{})};
+  if(TOKEN) h.Authorization='Bearer '+TOKEN;
+  const r=await fetch(p,{...o,headers:h});
+  if(r.status===401){ TOKEN=''; localStorage.removeItem('facet-token'); showGate(); throw new Error('signed out'); }
   if(!r.ok) throw new Error((await r.text()).slice(0,300));
   return (r.headers.get('content-type')||'').includes('json')?r.json():r.text();};
 let RES=[], TOTAL=0, OFF=0, LIM=60, CUR=0, DENS=210, BUSY=false, STATS={}, LASTDIAG=null;
@@ -687,14 +803,70 @@ async function fav(id,el){
   toast(on?'Removed from favourites':'Added to favourites');
 }
 
+/* ---------- accounts ---------- */
+let MODE='login';
+function showGate(msg){ $('#gate').hidden=false; if(msg) $('#gErr').textContent=msg; }
+function hideGate(){ $('#gate').hidden=true; $('#gErr').textContent=''; }
+$('#gSwap').onclick=()=>{ MODE=MODE==='login'?'register':'login';
+  $('#gGo').textContent=MODE==='login'?'Sign in':'Create account';
+  $('#gSwap').textContent=MODE==='login'?'Create an account instead':'I already have an account';
+  $('#gPass').autocomplete=MODE==='login'?'current-password':'new-password';
+  $('#gErr').textContent=''; };
+$('#gateForm').onsubmit=async e=>{
+  e.preventDefault(); $('#gErr').textContent='';
+  try{
+    const r=await api('/api/auth/'+MODE,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({username:$('#gUser').value.trim(),password:$('#gPass').value})});
+    TOKEN=r.token; localStorage.setItem('facet-token',TOKEN);
+    hideGate();
+    if(r.migrated_default_profile) toast('Your existing preferences moved to this account');
+    await boot();
+  }catch(err){ $('#gErr').textContent=err.message.replace(/^\{.*"detail":"?/,'').replace(/"?\}$/,''); }
+};
+$('#logout').onclick=async()=>{
+  try{ await api('/api/auth/logout',{method:'POST'}); }catch{}
+  TOKEN=''; localStorage.removeItem('facet-token'); location.reload();
+};
+
+/* ---------- undo ---------- */
+let UNDO=null;
+function undoSecs(){ return +$('#undoSec').value; }
+function offerUndo(faceId, kind, secs){
+  clearTimeout(UNDO?.t); clearInterval(UNDO?.i);
+  const t=$('#toast'); const label=kind==='like'?'Liked':'Rejected';
+  const total=Math.max(secs,0.001); let left=secs;
+  t.innerHTML=`<span class="undoBar">
+    <svg class="undoRing" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="9"/>
+      <circle class="fg" cx="12" cy="12" r="9" stroke-dasharray="56.5" stroke-dashoffset="0"/></svg>
+    <span>${label} — learning in <b id="undoLeft">${secs}</b>s</span>
+    <button id="undoBtn">Undo</button></span>`;
+  t.classList.add('on');
+  const ring=t.querySelector('.fg');
+  UNDO={faceId,kind,
+    i:setInterval(()=>{ left=Math.max(0,left-0.1);
+      const el=t.querySelector('#undoLeft'); if(el) el.textContent=Math.ceil(left);
+      if(ring) ring.style.strokeDashoffset=String(56.5*(1-left/total));
+    },100),
+    t:setTimeout(()=>{ clearInterval(UNDO.i); t.classList.remove('on'); UNDO=null; run(); }, secs*1000)};
+  t.querySelector('#undoBtn').onclick=async()=>{
+    clearTimeout(UNDO.t); clearInterval(UNDO.i); t.classList.remove('on');
+    await api('/api/feedback/undo',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({face_id:faceId,kind})});
+    UNDO=null; toast('Reversed — nothing was learned'); await taste(); run();
+  };
+}
+
 /* ---------- taught preference ---------- */
 async function judge(id,kind){
-  await api('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({face_id:id,kind})});
-  if(!$('#pOn').checked){ $('#pOn').checked=true; toast('Personalisation on — learning from you'); }
-  else toast(kind==='like'?'More like this':'Fewer like this');
-  await taste();
-  run();                     // re-rank immediately so the adjustment is visible
+  const secs=undoSecs();
+  const r=await api('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({face_id:id,kind,undo_seconds:secs})});
+  if(!$('#pOn').checked) $('#pOn').checked=true;
+  // Remove it from view at once - the point of rejecting is not to see it again - while
+  // the model only learns once the undo window closes.
+  RES=RES.filter(x=>x.face_id!==id); TOTAL=Math.max(0,TOTAL-1); render(LASTDIAG);
+  if(secs>0) offerUndo(id,kind,secs);
+  else { toast(kind==='like'?'More like this':'Fewer like this'); await taste(); run(); }
 }
 async function taste(){
   let d; try{ d=await api('/api/preference'); }catch{ return; }
@@ -731,6 +903,8 @@ $('#resetPref').onclick=async()=>{ if(!confirm('Forget everything Facet has lear
 $('#pOn').onchange=()=>{taste();run();};
 $('#pStr').oninput=()=>{$('#pStrV').textContent=(+$('#pStr').value).toFixed(2).replace(/0$/,'')+'×';taste();};
 $('#pStr').onchange=()=>run();
+$('#undoSec').oninput=()=>{const v=undoSecs();
+  $('#undoSecV').textContent=v===0?'off':v+'s'; localStorage.setItem('facet-undo',v);};
 
 /* ---------- detail ---------- */
 async function open(i){
@@ -927,17 +1101,31 @@ async function loadSaved(){
     syncMix(); run();};
 }
 
+async function boot(){
+  const a=await api('/api/about');
+  $('#banner').hidden=false;
+  $('#banner').innerHTML=`<div><b>These are model estimates, not measurements.</b>
+    ${a.disclaimer.estimates_not_measurements} ${a.disclaimer.measured_skew}</div>
+    <button onclick="this.parentElement.hidden=true" title="Dismiss">×</button>`;
+  let who;
+  try{ who=await api('/api/auth/status'); }catch{ who={open_mode:true}; }
+  $('#who').innerHTML = who.user ? `Signed in as <b>${who.user}</b>`
+    : 'Open mode — <b>no account</b>. Create one for a private taste model.';
+  $('#logout').style.display = who.user ? '' : 'none';
+  await stats(); await loadSaved(); await taste();
+  STATS.ready ? run() : onboarding();
+}
+
 (async function(){
   document.documentElement.dataset.theme=localStorage.getItem('t')||'dark';
+  const u=localStorage.getItem('facet-undo'); if(u!==null){ $('#undoSec').value=u;
+    $('#undoSecV').textContent=+u===0?'off':u+'s'; }
   syncMix();
   try{
-    const a=await api('/api/about');
-    $('#banner').hidden=false;
-    $('#banner').innerHTML=`<div><b>These are model estimates, not measurements.</b>
-      ${a.disclaimer.estimates_not_measurements} ${a.disclaimer.measured_skew}</div>
-      <button onclick="this.parentElement.hidden=true" title="Dismiss">×</button>`;
-    await stats(); await loadSaved(); await taste();
-    STATS.ready ? run() : onboarding();
+    const st=await fetch('/api/auth/status',{headers:TOKEN?{Authorization:'Bearer '+TOKEN}:{}})
+      .then(r=>r.json());
+    if(st.accounts_exist && !st.authenticated){ showGate(); return; }
+    await boot();
   }catch(e){ $('#view').innerHTML=`<div class="state"><div class="ico">⚠</div>
     <h2>Can't reach the server</h2><p>${e.message}</p></div>`; }
 })();

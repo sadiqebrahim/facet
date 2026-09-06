@@ -110,6 +110,11 @@ CREATE TABLE IF NOT EXISTS feedback (
     kind       TEXT NOT NULL,          -- like | dislike | hide | wrong
     note       TEXT,
     created_at REAL,
+    -- A judgement takes effect on the MODEL only once this passes. Until then it is
+    -- reversible: the face disappears from results immediately (which is what the user
+    -- asked for) but the preference model has not learned from it yet, so an undo leaves
+    -- no trace rather than requiring the model to unlearn something.
+    commit_at  REAL DEFAULT 0,
     PRIMARY KEY (face_id, user, kind)
 );
 CREATE INDEX IF NOT EXISTS idx_feedback_user ON feedback(user, kind);
@@ -163,8 +168,17 @@ class Index:
         self.conn = sqlite3.connect(str(self.path), timeout=60.0)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
+        self._migrate()
         self.set_meta("schema_version", str(SCHEMA_VERSION))
         self.conn.commit()
+
+    def _migrate(self) -> None:
+        """Additive migrations for indexes created by an earlier version."""
+        cols = {r[1] for r in self.conn.execute("PRAGMA table_info(feedback)")}
+        if "commit_at" not in cols:
+            # Pre-existing judgements are already acted upon, so they commit immediately.
+            self.conn.execute("ALTER TABLE feedback ADD COLUMN commit_at REAL DEFAULT 0")
+            self.conn.commit()
 
     # ------------------------------------------------------------------ basics
 
@@ -302,13 +316,39 @@ class Index:
     # ---------------------------------------------------------------- feedback
 
     def add_feedback(self, face_id: int, kind: str, user: str = "default",
-                     note: str | None = None) -> None:
+                     note: str | None = None, undo_seconds: float = 10.0) -> float:
+        """Record a judgement. Returns the timestamp at which it starts affecting ranking."""
+        now = time.time()
+        commit_at = now + max(0.0, undo_seconds)
         self.conn.execute(
-            "INSERT INTO feedback(face_id,user,kind,note,created_at) VALUES(?,?,?,?,?) "
+            "INSERT INTO feedback(face_id,user,kind,note,created_at,commit_at) "
+            "VALUES(?,?,?,?,?,?) "
             "ON CONFLICT(face_id,user,kind) DO UPDATE SET note=excluded.note,"
-            "created_at=excluded.created_at",
-            (face_id, user, kind, note, time.time()))
+            "created_at=excluded.created_at, commit_at=excluded.commit_at",
+            (face_id, user, kind, note, now, commit_at))
         self.conn.commit()
+        return commit_at
+
+    def undo_feedback(self, face_id: int, user: str = "default",
+                      kind: str | None = None) -> int:
+        """Reverse a judgement. The face returns to results and the model never saw it,
+        provided the undo happened inside the window."""
+        if kind:
+            cur = self.conn.execute(
+                "DELETE FROM feedback WHERE face_id=? AND user=? AND kind=?",
+                (face_id, user, kind))
+        else:
+            cur = self.conn.execute(
+                "DELETE FROM feedback WHERE face_id=? AND user=?", (face_id, user))
+        self.conn.commit()
+        return cur.rowcount
+
+    def pending_feedback(self, user: str = "default") -> list[dict]:
+        """Judgements still inside their undo window."""
+        now = time.time()
+        return [dict(r) for r in self.conn.execute(
+            "SELECT face_id, kind, created_at, commit_at FROM feedback "
+            "WHERE user=? AND commit_at > ? ORDER BY created_at DESC", (user, now))]
 
     def remove_feedback(self, face_id: int, kind: str, user: str = "default") -> None:
         self.conn.execute("DELETE FROM feedback WHERE face_id=? AND user=? AND kind=?",
