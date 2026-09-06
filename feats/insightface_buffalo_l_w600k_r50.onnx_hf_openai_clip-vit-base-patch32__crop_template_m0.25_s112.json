@@ -1,0 +1,7 @@
+{
+  "encoder_version": "insightface:buffalo_l:w600k_r50.onnx+hf:openai/clip-vit-base-patch32",
+  "crop_version": "crop:template:m0.25:s112",
+  "dim": 1024,
+  "dtype": "float32",
+  "count": 1793
+}

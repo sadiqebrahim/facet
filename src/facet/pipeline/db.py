@@ -114,6 +114,22 @@ CREATE TABLE IF NOT EXISTS feedback (
 );
 CREATE INDEX IF NOT EXISTS idx_feedback_user ON feedback(user, kind);
 
+-- Reference faces: examples the user supplies to teach the preference model. Kept apart
+-- from `feedback` because they are idealised examples rather than judgements on real
+-- candidates, and the model weights them differently.
+CREATE TABLE IF NOT EXISTS reference_faces (
+    id        INTEGER PRIMARY KEY,
+    user      TEXT NOT NULL DEFAULT 'default',
+    path      TEXT NOT NULL,
+    face_idx  INTEGER NOT NULL DEFAULT 0,
+    feature   BLOB NOT NULL,
+    dim       INTEGER NOT NULL,
+    kind      TEXT NOT NULL DEFAULT 'like',   -- like | dislike
+    added_at  REAL,
+    UNIQUE(user, path, face_idx)
+);
+CREATE INDEX IF NOT EXISTS idx_ref_user ON reference_faces(user, kind);
+
 CREATE TABLE IF NOT EXISTS saved_searches (
     id         INTEGER PRIMARY KEY,
     name       TEXT NOT NULL UNIQUE,
@@ -305,6 +321,41 @@ class Index:
                 "SELECT face_id, kind FROM feedback WHERE user=?", (user,)):
             out.setdefault(r["face_id"], []).append(r["kind"])
         return out
+
+    # ------------------------------------------------------- reference faces
+
+    def add_reference(self, path: str, face_idx: int, feature, kind: str = "like",
+                      user: str = "default") -> None:
+        import numpy as np
+        f = np.asarray(feature, dtype=np.float32)
+        self.conn.execute(
+            "INSERT INTO reference_faces(user,path,face_idx,feature,dim,kind,added_at) "
+            "VALUES(?,?,?,?,?,?,?) ON CONFLICT(user,path,face_idx) DO UPDATE SET "
+            "feature=excluded.feature, kind=excluded.kind, added_at=excluded.added_at",
+            (user, path, face_idx, f.tobytes(), int(f.size), kind, time.time()))
+        self.conn.commit()
+
+    def references(self, user: str = "default") -> list[dict]:
+        import numpy as np
+        out = []
+        for r in self.conn.execute(
+                "SELECT id,path,face_idx,feature,dim,kind FROM reference_faces WHERE user=?",
+                (user,)):
+            out.append({"id": r["id"], "path": r["path"], "face_idx": r["face_idx"],
+                        "kind": r["kind"],
+                        "feature": np.frombuffer(r["feature"], dtype=np.float32)})
+        return out
+
+    def clear_references(self, user: str = "default") -> int:
+        n = self.conn.execute("SELECT COUNT(*) FROM reference_faces WHERE user=?",
+                              (user,)).fetchone()[0]
+        self.conn.execute("DELETE FROM reference_faces WHERE user=?", (user,))
+        self.conn.commit()
+        return n
+
+    def delete_reference(self, ref_id: int, user: str = "default") -> None:
+        self.conn.execute("DELETE FROM reference_faces WHERE id=? AND user=?", (ref_id, user))
+        self.conn.commit()
 
     def save_search(self, name: str, spec: dict) -> None:
         self.conn.execute(

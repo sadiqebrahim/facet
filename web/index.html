@@ -2,435 +2,789 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Facet</title>
 <style>
+/* 8pt spacing scale, dark greys rather than pure black, medium weights ------------ */
 :root{
-  --bg:#0f1115; --panel:#161a21; --panel2:#1d222b; --line:#272d38;
-  --fg:#e6e9ef; --muted:#98a2b3; --accent:#6aa6ff; --good:#4ade80; --warn:#fbbf24; --bad:#f87171;
-  --radius:10px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+  --bg:#0d0f13; --surface:#14171d; --surface2:#1a1e26; --raised:#20252f;
+  --line:#252b36; --line2:#323a48;
+  --fg:#e8ebf0; --fg2:#aab3c0; --fg3:#6f7885;
+  --accent:#5b9dff; --accent-dim:#2d4f80;
+  --good:#3ddc97; --warn:#f5b544; --bad:#ff6b6b;
+  --r1:6px; --r2:10px; --r3:14px;
+  --sidebar:288px;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.28);
 }
-[data-theme="light"]{
-  --bg:#f6f7f9; --panel:#fff; --panel2:#f0f2f5; --line:#dfe3ea;
-  --fg:#1a1d23; --muted:#5b6472; --accent:#2563eb;
+[data-theme=light]{
+  --bg:#f7f8fa; --surface:#fff; --surface2:#f2f4f7; --raised:#fff;
+  --line:#e3e7ed; --line2:#cfd6e0;
+  --fg:#141821; --fg2:#4d5563; --fg3:#818b99;
+  --accent:#2563eb; --accent-dim:#bfd4fb;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.08);
 }
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-a{color:var(--accent)}
-header{display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:20}
-header h1{font-size:16px;margin:0;letter-spacing:.02em}
-header .sub{color:var(--muted);font-size:12px}
-.spacer{flex:1}
-button,select,input{font:inherit;color:var(--fg);background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font:500 14px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
+button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
-button:hover{border-color:var(--accent)}
-button.primary{background:var(--accent);color:#08111f;border-color:var(--accent);font-weight:600}
-button.ghost{background:transparent}
-.layout{display:grid;grid-template-columns:310px 1fr;gap:0;align-items:start}
-aside{position:sticky;top:49px;height:calc(100vh - 49px);overflow:auto;border-right:1px solid var(--line);background:var(--panel);padding:14px}
-main{padding:16px;min-height:calc(100vh - 49px)}
-.group{border:1px solid var(--line);border-radius:var(--radius);padding:12px;margin-bottom:12px;background:var(--panel2)}
-.group h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:flex;align-items:center;gap:8px}
-.row{display:flex;align-items:center;gap:8px;margin:8px 0}
-.row label{flex:1;color:var(--muted);font-size:13px}
-.row input[type=number]{width:66px}
-.row input[type=range]{flex:1;accent-color:var(--accent)}
-.val{min-width:44px;text-align:right;font-variant-numeric:tabular-nums;color:var(--fg)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;cursor:pointer;position:relative;transition:transform .08s,border-color .12s}
-.card:hover{transform:translateY(-2px);border-color:var(--accent)}
-.card.sel{outline:2px solid var(--accent);outline-offset:-2px}
-.card img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:var(--panel2)}
-.card .meta{padding:8px 10px;font-size:12px}
-.bar{height:4px;background:var(--panel2)}
-.bar > i{display:block;height:100%;background:var(--accent)}
-.chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
-.chip{font-size:11px;padding:1px 6px;border-radius:999px;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
-.chip.warn{color:var(--warn);border-color:#4a3a12}
-.chip.good{color:var(--good)}
-.badge{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.7);color:#fff;font-size:11px;padding:2px 6px;border-radius:6px;backdrop-filter:blur(4px)}
-.fav{position:absolute;top:6px;right:6px;font-size:15px;opacity:.35}
-.fav.on{opacity:1}
-.notice{border:1px solid var(--line);border-left:3px solid var(--warn);background:var(--panel);padding:10px 12px;border-radius:8px;color:var(--muted);font-size:12.5px;margin-bottom:14px}
-.diag{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin:10px 0 16px}
-.diag b{color:var(--fg);font-variant-numeric:tabular-nums}
-dialog{border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:14px;padding:0;max-width:1100px;width:94vw}
-dialog::backdrop{background:rgba(0,0,0,.72)}
-.dlg{display:grid;grid-template-columns:1.15fr .85fr;gap:0}
-.dlg .imgwrap{position:relative;background:#000;display:flex;align-items:center;justify-content:center;min-height:60vh}
-.dlg .imgwrap img{max-width:100%;max-height:78vh;display:block}
-.dlg .side{padding:16px;overflow:auto;max-height:78vh}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin:8px 0}
-.kv dt{color:var(--muted)}
-.kv dd{margin:0;font-variant-numeric:tabular-nums}
-.dist{display:flex;align-items:flex-end;gap:3px;height:56px;margin:8px 0}
-.dist div{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-height:2px;position:relative}
-.dist span{position:absolute;bottom:-17px;width:100%;text-align:center;font-size:10px;color:var(--muted)}
-.explain{font-size:12px;border-top:1px solid var(--line);padding-top:8px;margin-top:10px}
-.explain .l{display:flex;justify-content:space-between;gap:10px;padding:3px 0;color:var(--muted)}
-.explain .l b{color:var(--fg);font-variant-numeric:tabular-nums}
-.empty{color:var(--muted);text-align:center;padding:60px 20px}
-progress{width:100%;height:8px}
-.hint{color:var(--muted);font-size:11.5px;margin-top:6px;line-height:1.45}
-.tabs{display:flex;gap:6px;margin-bottom:10px}
-.tabs button{flex:1;font-size:12px;padding:5px}
-.tabs button[aria-selected=true]{background:var(--accent);color:#08111f;border-color:var(--accent)}
-kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:11px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r1)}
+
+/* ---------- chrome ---------- */
+.top{display:flex;align-items:center;gap:var(--s4);height:56px;padding:0 var(--s4);
+  background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+.brand{display:flex;align-items:center;gap:var(--s2);font-weight:650;font-size:15px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+.stats{display:flex;gap:var(--s4);color:var(--fg2);font-size:12.5px;font-variant-numeric:tabular-nums}
+.stats b{color:var(--fg);font-weight:600}
+.grow{flex:1}
+.btn{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r1);
+  padding:7px 12px;font-size:13px;font-weight:550;transition:background .12s,border-color .12s}
+.btn:hover{background:var(--raised);border-color:var(--line2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#08111f;font-weight:650}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.icon{padding:7px 9px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.shell{display:grid;grid-template-columns:var(--sidebar) 1fr;min-height:calc(100vh - 56px)}
+aside{background:var(--surface);border-right:1px solid var(--line);
+  position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto;padding:var(--s4)}
+aside::-webkit-scrollbar{width:9px}
+aside::-webkit-scrollbar-thumb{background:var(--line2);border-radius:9px}
+main{padding:var(--s5) var(--s5) 64px;max-width:1800px}
+
+/* ---------- sidebar ---------- */
+.seg{display:flex;background:var(--surface2);border:1px solid var(--line);
+  border-radius:var(--r2);padding:3px;margin-bottom:var(--s4)}
+.seg button{flex:1;background:none;border:0;padding:6px;border-radius:7px;
+  font-size:12.5px;font-weight:600;color:var(--fg2)}
+.seg button[aria-selected=true]{background:var(--raised);color:var(--fg);box-shadow:var(--shadow)}
+.sect{border-top:1px solid var(--line);padding:var(--s4) 0}
+.sect:first-of-type{border-top:0;padding-top:0}
+.sect > h3{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--fg3);
+  margin-bottom:var(--s3);display:flex;align-items:center;gap:var(--s2)}
+.sect > h3 .w{margin-left:auto;color:var(--accent);font-variant-numeric:tabular-nums;
+  font-size:11px;background:var(--accent-dim);padding:1px 6px;border-radius:20px}
+.f{display:flex;align-items:center;gap:var(--s2);margin:var(--s2) 0}
+.f > label{flex:1;font-size:13px;color:var(--fg2);font-weight:500}
+.f input[type=number]{width:60px;background:var(--surface2);border:1px solid var(--line);
+  border-radius:var(--r1);padding:5px 7px;text-align:center;font-variant-numeric:tabular-nums}
+.f select{flex:1;background:var(--surface2);border:1px solid var(--line);
+  border-radius:var(--r1);padding:6px 8px}
+.f input[type=text]{flex:1;background:var(--surface2);border:1px solid var(--line);
+  border-radius:var(--r1);padding:7px 9px}
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;flex:1;height:18px}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:3px;background:var(--line2)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-5px;
+  border-radius:50%;background:var(--accent);border:2px solid var(--surface);box-shadow:var(--shadow)}
+.num{min-width:42px;text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--fg)}
+.sw{position:relative;width:34px;height:19px;flex:none}
+.sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.sw i{position:absolute;inset:0;background:var(--line2);border-radius:20px;transition:.15s}
+.sw i::after{content:"";position:absolute;left:2px;top:2px;width:15px;height:15px;border-radius:50%;
+  background:#fff;transition:.15s}
+.sw input:checked + i{background:var(--accent)}
+.sw input:checked + i::after{transform:translateX(15px)}
+.note{font-size:11.5px;line-height:1.5;color:var(--fg3);margin-top:var(--s2)}
+.note b{color:var(--fg2);font-weight:600}
+
+/* live weight bar - makes weighted ranking legible, which is the known UX failure mode */
+.mix{display:flex;height:8px;border-radius:20px;overflow:hidden;background:var(--surface2);
+  margin:var(--s2) 0 var(--s1)}
+.mix span{transition:flex-grow .2s}
+.mixkey{display:flex;gap:var(--s3);font-size:11px;color:var(--fg3);flex-wrap:wrap}
+.mixkey i{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:4px}
+
+.tastebar{height:6px;border-radius:20px;background:var(--surface2);overflow:hidden;margin:var(--s2) 0}
+.tastebar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#a06bff,#5b9dff);transition:width .3s}
+.reflist{display:flex;flex-wrap:wrap;gap:4px;margin-top:var(--s2)}
+.reflist span{font-size:10.5px;background:var(--surface2);border:1px solid var(--line);
+  border-radius:5px;padding:1px 6px;color:var(--fg3);display:flex;gap:4px;align-items:center}
+.reflist span b{color:var(--fg2);font-weight:500}
+.reflist span button{background:none;border:0;color:var(--fg3);padding:0;font-size:12px;line-height:1}
+.judge{position:absolute;bottom:calc(var(--s3) + 26px);left:var(--s2);right:var(--s2);
+  display:flex;gap:4px;opacity:0;transition:opacity .13s}
+.card:hover .judge{opacity:1}
+.judge button{flex:1;border:0;border-radius:6px;padding:5px;font-size:11.5px;font-weight:600;
+  background:rgba(8,10,14,.85);color:#fff;backdrop-filter:blur(6px)}
+.judge button.y:hover{background:#2f7d55} .judge button.n:hover{background:#8f3b3b}
+.tag.mine{color:#c4a4ff;border-color:#4a3a70}
+.presets{display:flex;flex-wrap:wrap;gap:var(--s1);margin-bottom:var(--s3)}
+.presets button{background:var(--surface2);border:1px solid var(--line);border-radius:20px;
+  padding:4px 10px;font-size:12px;color:var(--fg2)}
+.presets button:hover{border-color:var(--accent);color:var(--fg)}
+
+/* ---------- results ---------- */
+.banner{display:flex;gap:var(--s3);background:var(--surface);border:1px solid var(--line);
+  border-left:3px solid var(--warn);border-radius:var(--r2);padding:var(--s3) var(--s4);
+  margin-bottom:var(--s4);font-size:12.5px;color:var(--fg2);line-height:1.55}
+.banner b{color:var(--fg)}
+.banner button{margin-left:auto;background:none;border:0;color:var(--fg3);font-size:18px;line-height:1;align-self:start}
+.toolbar{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s4);flex-wrap:wrap}
+.count{font-size:20px;font-weight:650;font-variant-numeric:tabular-nums}
+.pill{font-size:11.5px;color:var(--fg2);background:var(--surface2);border:1px solid var(--line);
+  border-radius:20px;padding:3px 10px}
+.pill.warn{color:var(--warn);border-color:#4a3a12;background:#2a2010}
+
+.grid{display:grid;gap:var(--s3);
+  grid-template-columns:repeat(auto-fill,minmax(var(--card,210px),1fr))}
+.card{position:relative;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r2);overflow:hidden;cursor:pointer;
+  transition:transform .13s ease,box-shadow .13s ease,border-color .13s}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--line2)}
+.card .ph{aspect-ratio:1;background:var(--surface2);position:relative;overflow:hidden}
+.card .ph img{width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .25s}
+.card .ph img.on{opacity:1}
+.rank{position:absolute;top:var(--s2);left:var(--s2);background:rgba(8,10,14,.82);
+  color:#fff;font-size:11.5px;font-weight:650;padding:3px 8px;border-radius:20px;
+  backdrop-filter:blur(6px);font-variant-numeric:tabular-nums}
+.star{position:absolute;top:var(--s2);right:var(--s2);width:28px;height:28px;border:0;
+  border-radius:50%;background:rgba(8,10,14,.7);color:#fff;font-size:14px;
+  backdrop-filter:blur(6px);opacity:0;transition:opacity .13s}
+.card:hover .star,.star.on{opacity:1}
+.star.on{color:var(--warn)}
+.card .body{padding:var(--s2) var(--s3) var(--s3)}
+.card .l1{display:flex;align-items:baseline;gap:var(--s2);font-variant-numeric:tabular-nums}
+.card .est{font-size:15px;font-weight:650}
+.card .of{font-size:11px;color:var(--fg3)}
+.card .l2{display:flex;gap:var(--s1);flex-wrap:wrap;margin-top:var(--s2)}
+.tag{font-size:10.5px;font-weight:550;color:var(--fg2);background:var(--surface2);
+  border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+.tag.warn{color:var(--warn);border-color:#4a3a12}
+.tag.dim{color:var(--fg3)}
+.meter{height:3px;background:var(--surface2)}
+.meter i{display:block;height:100%;background:linear-gradient(90deg,var(--accent-dim),var(--accent))}
+
+.skel{background:linear-gradient(100deg,var(--surface2) 30%,var(--raised) 50%,var(--surface2) 70%);
+  background-size:200% 100%;animation:sh 1.1s infinite}
+@keyframes sh{to{background-position:-200% 0}}
+
+.state{text-align:center;padding:72px var(--s5);max-width:560px;margin:0 auto}
+.state .ico{font-size:40px;margin-bottom:var(--s4);opacity:.5}
+.state h2{font-size:19px;margin-bottom:var(--s2)}
+.state p{color:var(--fg2);margin:0 0 var(--s5);line-height:1.6;font-size:13.5px}
+
+/* ---------- taught preference ---------- */
+async function judge(id,kind){
+  await api('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({face_id:id,kind})});
+  if(!$('#pOn').checked){ $('#pOn').checked=true; toast('Personalisation on — learning from you'); }
+  else toast(kind==='like'?'More like this':'Fewer like this');
+  await taste();
+  run();                     // re-rank immediately so the adjustment is visible
+}
+async function taste(){
+  let d; try{ d=await api('/api/preference'); }catch{ return; }
+  const on=$('#pOn').checked, a=(d.alpha||0)*(on?+$('#pStr').value:0);
+  const eff=Math.min(0.95,a);
+  $('#taste%').textContent = on? Math.round(eff*100)+'%' : 'off';
+  $('#tasteFill').style.width=(on?eff*100:0)+'%';
+  $('#tasteNote').textContent = d.note || 'Not taught yet.';
+  const refs=d.references||[];
+  $('#refList').innerHTML = refs.length? `<div class="reflist">${refs.map(r=>
+    `<span><b>${r.kind==='like'?'♥':'✕'}</b>${r.path.split('/').pop().slice(0,18)}
+      <button data-del="${r.id}">×</button></span>`).join('')}</div>` : '';
+  $$('#refList [data-del]').forEach(b=>b.onclick=async()=>{
+    await fetch('/api/preference/references/'+b.dataset.del,{method:'DELETE'});
+    taste(); run(); });
+}
+async function addRefs(kind){
+  const path=$('#refPath').value.trim(); if(!path) return toast('Enter an image or folder path');
+  toast('Reading reference faces…');
+  try{
+    const r=await api('/api/preference/references',{method:'POST',
+      headers:{'content-type':'application/json'},body:JSON.stringify({paths:[path],kind})});
+    toast(`Added ${r.added} reference face${r.added===1?'':'s'}`
+      + (r.skipped.length?` · ${r.skipped.length} skipped`:''));
+    if(r.added){ $('#pOn').checked=true; $('#refPath').value=''; await taste(); run(); }
+    else if(r.skipped.length) toast('None usable: '+r.skipped[0].reason);
+  }catch(e){ toast(e.message.slice(0,120)); }
+}
+$('#addRef').onclick=()=>addRefs('like');
+$('#addRefBad').onclick=()=>addRefs('dislike');
+$('#resetPref').onclick=async()=>{ if(!confirm('Forget everything Facet has learned about your taste?')) return;
+  await api('/api/preference/reset',{method:'POST'}); $('#pOn').checked=false;
+  await taste(); run(); toast('Preferences cleared'); };
+$('#pOn').onchange=()=>{taste();run();};
+$('#pStr').oninput=()=>{$('#pStrV').textContent=(+$('#pStr').value).toFixed(2).replace(/0$/,'')+'×';taste();};
+$('#pStr').onchange=()=>run();
+
+/* ---------- detail ---------- */
+dialog{border:0;padding:0;background:transparent;max-width:none;max-height:none;width:100%;height:100%}
+dialog::backdrop{background:rgba(4,6,10,.86);backdrop-filter:blur(3px)}
+.sheet{display:grid;grid-template-columns:minmax(0,1fr) 400px;background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r3);overflow:hidden;box-shadow:var(--shadow);
+  width:min(1360px,94vw);height:min(860px,92vh);margin:auto;position:relative;top:50%;transform:translateY(-50%)}
+.stage{background:#07090c;display:flex;align-items:center;justify-content:center;position:relative}
+.stage img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+.stage canvas{position:absolute;pointer-events:none}
+.nav{position:absolute;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;
+  background:rgba(20,23,29,.9);border:1px solid var(--line2);color:var(--fg);font-size:16px}
+.nav.prev{left:var(--s3)} .nav.next{right:var(--s3)}
+.panel{overflow-y:auto;padding:var(--s5);display:flex;flex-direction:column;gap:var(--s4)}
+.panel h2{font-size:16px}
+.path{font-size:11px;color:var(--fg3);word-break:break-all}
+.big{display:flex;align-items:baseline;gap:var(--s2)}
+.big .v{font-size:34px;font-weight:680;line-height:1;font-variant-numeric:tabular-nums}
+.big .u{color:var(--fg3);font-size:13px}
+.rows{display:grid;grid-template-columns:auto 1fr;gap:var(--s2) var(--s4);font-size:13px}
+.rows dt{color:var(--fg2)} .rows dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.block{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r2);padding:var(--s3)}
+.block h4{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--fg3);
+  margin:0 0 var(--s2);font-weight:600}
+.hist{display:flex;align-items:flex-end;gap:var(--s1);height:64px}
+.hist div{flex:1;background:var(--accent-dim);border-radius:4px 4px 0 0;position:relative;min-height:3px}
+.hist div.peak{background:var(--accent)}
+.hist div span{position:absolute;bottom:-18px;left:0;right:0;text-align:center;font-size:10px;color:var(--fg3)}
+.why{font-size:12px}
+.why .r{display:flex;justify-content:space-between;gap:var(--s3);padding:5px 0;border-bottom:1px solid var(--line)}
+.why .r:last-child{border:0}
+.why .k{color:var(--fg2)} .why .d{color:var(--fg3);font-size:11px}
+.why .v{font-weight:650;font-variant-numeric:tabular-nums}
+.acts{display:flex;gap:var(--s2)}
+.acts .btn{flex:1;text-align:center}
+
+.toast{position:fixed;bottom:var(--s5);left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--raised);border:1px solid var(--line2);border-radius:var(--r2);
+  padding:10px 18px;font-size:13px;box-shadow:var(--shadow);opacity:0;
+  transition:.22s;z-index:60;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width:2px;
+  border-radius:4px;padding:1px 5px;font-size:10.5px;font-family:inherit}
+.prog{height:6px;background:var(--surface2);border-radius:20px;overflow:hidden;margin:var(--s2) 0}
+.prog i{display:block;height:100%;background:var(--accent);width:30%;
+  animation:slide 1.4s infinite ease-in-out}
+@keyframes slide{0%{margin-left:-30%}100%{margin-left:100%}}
+.stagelist{display:flex;flex-direction:column;gap:var(--s2);font-size:12.5px}
+.stagelist div{display:flex;gap:var(--s2);align-items:center;color:var(--fg3)}
+.stagelist div.done{color:var(--fg2)} .stagelist div.now{color:var(--accent);font-weight:600}
+@media(max-width:1080px){.shell{grid-template-columns:1fr}aside{position:static;height:auto}
+  .sheet{grid-template-columns:1fr;grid-template-rows:1fr auto}}
 </style>
 </head>
 <body>
-<header>
-  <h1>Facet</h1>
-  <span class="sub" id="stat">loading…</span>
-  <span class="spacer"></span>
-  <select id="sort" title="Sort results by">
-    <option value="relevance">Best overall match</option>
-    <option value="attractiveness">Attractiveness</option>
-    <option value="confidence">Confidence</option>
-    <option value="quality">Face quality</option>
-    <option value="age_match">Age match</option>
+
+<div class="top">
+  <div class="brand"><span class="dot"></span> Facet</div>
+  <div class="stats" id="stats"></div>
+  <span class="grow"></span>
+  <select class="btn" id="sort" title="Sort order">
+    <option value="relevance">Best match</option>
+    <option value="attractiveness">Highest estimate</option>
+    <option value="confidence">Most confident</option>
+    <option value="quality">Best quality</option>
+    <option value="age_match">Closest age</option>
   </select>
-  <button id="export" class="ghost" title="Export current results">Export</button>
-  <button id="theme" class="ghost" title="Toggle theme">◐</button>
-</header>
+  <button class="btn icon" id="dens" title="Card size">▦</button>
+  <button class="btn" id="exp" title="Export results as CSV">Export</button>
+  <button class="btn icon" id="theme" title="Light / dark">◐</button>
+</div>
 
-<div class="layout">
+<div class="shell">
 <aside>
-  <div class="tabs" role="tablist">
-    <button id="tab-search" aria-selected="true">Search</button>
-    <button id="tab-index" aria-selected="false">Index</button>
+  <div class="seg" role="tablist">
+    <button id="tSearch" aria-selected="true">Search</button>
+    <button id="tLib" aria-selected="false">Library</button>
   </div>
 
-  <div id="panel-search">
-    <div class="group">
-      <h3>Age</h3>
-      <div class="row"><label>Range</label>
-        <input type="number" id="ageMin" value="25" min="0" max="100">
-        <input type="number" id="ageMax" value="35" min="0" max="100"></div>
-      <div class="row"><label>Importance</label>
-        <input type="range" id="ageW" min="0" max="1" step="0.05" value="0.3">
-        <span class="val" id="ageWv">30%</span></div>
-      <div class="row"><label>Require an age prediction</label>
-        <input type="checkbox" id="ageReq"></div>
-      <p class="hint">Age comes from a lazy pass, so many faces have none yet. Unless you
-        require it, those faces still appear — the criterion just contributes nothing.</p>
+  <!-- ============ SEARCH ============ -->
+  <div id="pSearch">
+    <div class="presets">
+      <button data-pre="balanced">Balanced</button>
+      <button data-pre="looks">Looks first</button>
+      <button data-pre="age">Age first</button>
+      <button data-pre="quality">Best photos</button>
+      <button data-pre="reset">Clear</button>
     </div>
 
-    <div class="group">
-      <h3>Gender</h3>
-      <div class="row"><label>Presenting as</label>
-        <select id="gender"><option value="">any</option><option value="female">female</option>
-        <option value="male">male</option></select></div>
-      <div class="row"><label>Importance</label>
-        <input type="range" id="genW" min="0" max="1" step="0.05" value="0.2">
-        <span class="val" id="genWv">20%</span></div>
-      <div class="row"><label>Strict filter</label><input type="checkbox" id="genStrict"></div>
-      <p class="hint">Soft by default. A hard filter on a ~96%-accurate classifier silently
-        drops real matches, unevenly across groups — strict mode reports how many it removed.</p>
+    <div class="sect">
+      <h3>Criteria mix <span class="w" id="mixTot">100%</span></h3>
+      <div class="mix" id="mix"></div>
+      <div class="mixkey">
+        <span><i style="background:#5b9dff"></i>Looks</span>
+        <span><i style="background:#3ddc97"></i>Age</span>
+        <span><i style="background:#f5b544"></i>Gender</span>
+      </div>
+      <p class="note" id="mixNote"></p>
     </div>
 
-    <div class="group">
-      <h3>Attractiveness</h3>
-      <div class="row"><label>Top</label>
-        <input type="range" id="attrPct" min="0" max="0.99" step="0.01" value="0.8">
-        <span class="val" id="attrPctv">20%</span></div>
-      <div class="row"><label>Importance</label>
+    <div class="sect" id="tasteSect">
+      <h3>Your taste <span class="w" id="taste%">off</span></h3>
+      <div class="f"><label>Personalise ranking</label>
+        <span class="sw"><input type="checkbox" id="pOn"><i></i></span></div>
+      <div class="f"><label>Lean on my taste</label>
+        <input type="range" id="pStr" min="0.25" max="3" step="0.25" value="1">
+        <span class="num" id="pStrV">1.0×</span></div>
+      <div class="tastebar"><i id="tasteFill"></i></div>
+      <p class="note" id="tasteNote">Not taught yet.</p>
+      <div class="f" style="margin-top:10px">
+        <input type="text" id="refPath" placeholder="/path/to/faces-you-like"></div>
+      <div class="f"><button class="btn" id="addRef" style="flex:1">+ Add as “I like this”</button></div>
+      <div class="f"><button class="btn" id="addRefBad" style="flex:1">+ Add as “not my type”</button>
+        <button class="btn" id="resetPref" title="Forget everything learned">↺</button></div>
+      <p class="note">Point at a single image or a whole folder. Faces are detected and
+        encoded the same way as your library, so they are directly comparable.</p>
+      <div id="refList"></div>
+    </div>
+
+    <div class="sect">
+      <h3>Attractiveness <span class="w" id="wA">50%</span></h3>
+      <div class="f"><label>Top percentile</label>
+        <input type="range" id="attrPct" min="0" max="0.98" step="0.02" value="0.7">
+        <span class="num" id="attrPctV">30%</span></div>
+      <div class="f"><label>Importance</label>
         <input type="range" id="attrW" min="0" max="1" step="0.05" value="0.5">
-        <span class="val" id="attrWv">50%</span></div>
-      <p class="hint">A <b>percentile of your collection</b>, not an absolute score. Absolute
-        thresholds don't survive a change of image domain, so "above 4.0" isn't meaningful.</p>
+        <span class="num" id="attrWV">0.50</span></div>
+      <p class="note">A <b>percentile of your library</b>, not an absolute score — absolute
+        thresholds don't transfer between image collections.</p>
     </div>
 
-    <div class="group">
-      <h3>Quality &amp; confidence</h3>
-      <div class="row"><label>Min face quality</label>
-        <input type="range" id="minQ" min="0" max="1" step="0.05" value="0.3">
-        <span class="val" id="minQv">0.30</span></div>
-      <div class="row"><label>Min face size (px)</label>
-        <input type="number" id="minPx" value="60" min="0" max="1000"></div>
-      <div class="row"><label>Hide out-of-distribution</label><input type="checkbox" id="noOod"></div>
-      <div class="row"><label>Collapse near-duplicates</label>
-        <input type="checkbox" id="dedup" checked></div>
-      <p class="hint">Out-of-distribution faces are ones the model has no business being
-        confident about; their numeric confidence is suppressed rather than guessed.</p>
+    <div class="sect">
+      <h3>Age <span class="w" id="wG">30%</span></h3>
+      <div class="f"><label>Between</label>
+        <input type="number" id="ageMin" value="20" min="0" max="100">
+        <input type="number" id="ageMax" value="35" min="0" max="100"></div>
+      <div class="f"><label>Importance</label>
+        <input type="range" id="ageW" min="0" max="1" step="0.05" value="0.3">
+        <span class="num" id="ageWV">0.30</span></div>
+      <div class="f"><label>Must have an age estimate</label>
+        <span class="sw"><input type="checkbox" id="ageReq"><i></i></span></div>
     </div>
 
-    <div class="group">
-      <h3>Saved</h3>
-      <div class="row"><select id="saved" style="flex:1"><option value="">— saved searches —</option></select></div>
-      <div class="row"><button id="save" class="ghost" style="flex:1">Save current</button>
-        <button id="delSaved" class="ghost">Delete</button></div>
-      <div class="row"><button id="showFavs" class="ghost" style="flex:1">Show favourites only</button></div>
+    <div class="sect">
+      <h3>Gender <span class="w" id="wS">20%</span></h3>
+      <div class="f"><label>Presenting as</label>
+        <select id="gender"><option value="">Any</option>
+          <option value="female">Female</option><option value="male">Male</option></select></div>
+      <div class="f"><label>Importance</label>
+        <input type="range" id="genW" min="0" max="1" step="0.05" value="0.2">
+        <span class="num" id="genWV">0.20</span></div>
+      <div class="f"><label>Exclude non-matching</label>
+        <span class="sw"><input type="checkbox" id="genStrict"><i></i></span></div>
+      <p class="note">Soft by default. A hard filter on an imperfect classifier drops real
+        matches unevenly — strict mode tells you how many it removed.</p>
     </div>
 
-    <button id="run" class="primary" style="width:100%">Search</button>
+    <div class="sect">
+      <h3>Filters</h3>
+      <div class="f"><label>Min face quality</label>
+        <input type="range" id="minQ" min="0" max="1" step="0.05" value="0.2">
+        <span class="num" id="minQV">0.20</span></div>
+      <div class="f"><label>Min face size</label>
+        <input type="number" id="minPx" value="0" min="0" max="2000"><span class="num">px</span></div>
+      <div class="f"><label>Hide unreliable estimates</label>
+        <span class="sw"><input type="checkbox" id="noOod"><i></i></span></div>
+      <div class="f"><label>Collapse duplicates</label>
+        <span class="sw"><input type="checkbox" id="dedup" checked><i></i></span></div>
+      <div class="f"><label>Favourites only</label>
+        <span class="sw"><input type="checkbox" id="favOnly"><i></i></span></div>
+      <div class="f"><label>Path contains</label><input type="text" id="pathq" placeholder="any"></div>
+    </div>
+
+    <div class="sect">
+      <h3>Saved searches</h3>
+      <div class="f"><select id="saved"><option value="">— none selected —</option></select></div>
+      <div class="f"><button class="btn" id="save" style="flex:1">Save current</button>
+        <button class="btn" id="delSaved">Delete</button></div>
+    </div>
   </div>
 
-  <div id="panel-index" hidden>
-    <div class="group">
-      <h3>Add a directory</h3>
-      <div class="row"><input id="root" placeholder="/home/you/Photos" style="flex:1"></div>
-      <div class="row"><label>Limit (0 = all)</label><input type="number" id="ilimit" value="0" min="0"></div>
-      <div class="row"><label>Re-index everything</label><input type="checkbox" id="iforce"></div>
-      <button id="startIndex" class="primary" style="width:100%">Scan &amp; index</button>
-      <p class="hint">Re-running is safe and incremental: unchanged files are skipped by
-        timestamp and size before anything is decoded.</p>
+  <!-- ============ LIBRARY ============ -->
+  <div id="pLib" hidden>
+    <div class="sect">
+      <h3>Add images</h3>
+      <div class="f"><input type="text" id="root" placeholder="/home/you/Photos"></div>
+      <div class="f"><label>Limit (0 = all)</label><input type="number" id="ilimit" value="0" min="0"></div>
+      <div class="f"><label>Estimate age &amp; gender</label>
+        <span class="sw"><input type="checkbox" id="iage" checked><i></i></span></div>
+      <div class="f"><label>Re-process everything</label>
+        <span class="sw"><input type="checkbox" id="iforce"><i></i></span></div>
+      <button class="btn primary" id="go" style="width:100%">Scan &amp; analyse</button>
+      <p class="note">Safe to re-run — unchanged files are skipped before anything is decoded.
+        Age &amp; gender is the slow stage; turn it off for a quick first pass.</p>
     </div>
-    <div class="group">
-      <h3>Progress</h3>
-      <div id="iprog" class="hint">idle</div>
-      <progress id="ibar" value="0" max="1" hidden></progress>
-    </div>
-    <div class="group">
-      <h3>Index stats</h3>
-      <div id="istats" class="hint">—</div>
-    </div>
+    <div class="sect"><h3>Progress</h3><div id="prog" class="note">Idle.</div></div>
+    <div class="sect"><h3>Library</h3><div id="lib" class="note">—</div></div>
   </div>
 </aside>
 
 <main>
-  <div class="notice" id="notice">…</div>
-  <div class="diag" id="diag"></div>
-  <div class="grid" id="grid"></div>
-  <div class="empty" id="empty" hidden>No results. Try widening the age range, lowering the
-    attractiveness percentile, or reducing the minimum quality.</div>
-  <div style="text-align:center;margin:20px 0"><button id="more" class="ghost" hidden>Load more</button></div>
+  <div class="banner" id="banner" hidden></div>
+  <div id="view"></div>
 </main>
 </div>
 
-<dialog id="dlg"><div class="dlg">
-  <div class="imgwrap"><img id="dimg" alt="selected image"><canvas id="dbox" style="position:absolute;inset:0;pointer-events:none"></canvas></div>
-  <div class="side" id="dside"></div>
+<dialog id="dlg"><div class="sheet">
+  <div class="stage">
+    <img id="dimg" alt=""><canvas id="dbox"></canvas>
+    <button class="nav prev" id="prev">‹</button><button class="nav next" id="next">›</button>
+  </div>
+  <div class="panel" id="panel"></div>
 </div></dialog>
 
+<div class="toast" id="toast"></div>
+
 <script>
-const $ = s => document.querySelector(s);
-const api = (p,o) => fetch(p,o).then(r => r.ok ? (r.headers.get('content-type')||'').includes('json') ? r.json() : r.text() : r.text().then(t=>{throw new Error(t)}));
-let RESULTS=[], OFFSET=0, LIMIT=60, SEL=new Set(), FAVONLY=false, LAST=null;
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const api=async(p,o)=>{const r=await fetch(p,o);
+  if(!r.ok) throw new Error((await r.text()).slice(0,300));
+  return (r.headers.get('content-type')||'').includes('json')?r.json():r.text();};
+let RES=[], TOTAL=0, OFF=0, LIM=60, CUR=0, DENS=210, BUSY=false, STATS={};
 
-const pctLabel = v => `${Math.round((1-v)*100)}%`;
+const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('on');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2200);};
+
+/* ---------- query ---------- */
+function weights(){return{a:+$('#attrW').value,g:+$('#ageW').value,s:$('#gender').value?+$('#genW').value:0};}
 function spec(off=0){
-  const g=$('#gender').value, prefs={};
-  prefs.age={range:[+$('#ageMin').value,+$('#ageMax').value],weight:+$('#ageW').value,required:$('#ageReq').checked};
-  if(g) prefs.gender={value:g,weight:+$('#genW').value,mode:$('#genStrict').checked?'strict':'soft'};
-  prefs.attractiveness={min_percentile:+$('#attrPct').value,weight:+$('#attrW').value};
-  return {preferences:prefs,
-    filters:{min_quality:+$('#minQ').value,min_face_px:+$('#minPx').value,
-             exclude_ood:$('#noOod').checked,exclude_near_duplicates:$('#dedup').checked},
-    sort_by:$('#sort').value, limit:LIMIT, offset:off};
+  const w=weights(), p={};
+  p.attractiveness={min_percentile:+$('#attrPct').value,weight:w.a};
+  p.age={range:[+$('#ageMin').value,+$('#ageMax').value],weight:w.g,required:$('#ageReq').checked};
+  if($('#gender').value) p.gender={value:$('#gender').value,weight:w.s,
+    mode:$('#genStrict').checked?'strict':'soft'};
+  return {personalisation:{enabled:$('#pOn').checked,strength:+$('#pStr').value},
+    preferences:p, filters:{min_quality:+$('#minQ').value,min_face_px:+$('#minPx').value,
+      exclude_ood:$('#noOod').checked,exclude_near_duplicates:$('#dedup').checked,
+      paths_like:$('#pathq').value.trim()||null},
+    sort_by:$('#sort').value, limit:LIM, offset:off};
+}
+function syncMix(){
+  const w=weights(), t=w.a+w.g+w.s||1;
+  $('#mix').innerHTML=[[w.a,'#5b9dff'],[w.g,'#3ddc97'],[w.s,'#f5b544']]
+    .map(([v,c])=>`<span style="flex:${v};background:${c}"></span>`).join('');
+  $('#mixTot').textContent=Math.round(t*100)+'%';
+  $('#wA').textContent=Math.round(w.a/t*100)+'%';
+  $('#wG').textContent=Math.round(w.g/t*100)+'%';
+  $('#wS').textContent=Math.round(w.s/t*100)+'%';
+  $('#attrWV').textContent=w.a.toFixed(2); $('#ageWV').textContent=w.g.toFixed(2);
+  $('#genWV').textContent=(+$('#genW').value).toFixed(2);
+  $('#attrPctV').textContent=Math.round((1-$('#attrPct').value)*100)+'%';
+  $('#minQV').textContent=(+$('#minQ').value).toFixed(2);
+  // The known failure mode of weighted search: a low-weighted criterion gets overridden and
+  // the user cannot see why. Say it outright.
+  const top=Object.entries({Looks:w.a,Age:w.g,Gender:w.s}).sort((x,y)=>y[1]-x[1])[0];
+  const weak=Object.entries({looks:w.a,age:w.g,gender:w.s}).filter(([k,v])=>v>0&&v/t<0.2).map(([k])=>k);
+  $('#mixNote').innerHTML = t===0 ? 'All importances are zero — every result scores the same.'
+    : `<b>${top[0]}</b> dominates the ranking.` + (weak.length
+      ? ` A strong ${weak.join(' / ')} mismatch can still rank highly — raise its importance,
+         or use the exclude switch, if that surprises you.` : '');
 }
 
-async function search(more=false){
-  OFFSET = more ? OFFSET+LIMIT : 0;
-  const s = spec(OFFSET); LAST=s;
-  const r = await api('/api/search',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(s)});
-  RESULTS = more ? RESULTS.concat(r.results) : r.results;
-  render(r);
-}
+/* ---------- render ---------- */
+function skeleton(n=12){ $('#view').innerHTML=
+  `<div class="toolbar"><span class="count skel" style="width:110px;height:24px;border-radius:6px"></span></div>
+   <div class="grid">${'<div class="card"><div class="ph skel"></div><div class="body">\
+   <div class="skel" style="height:14px;border-radius:4px"></div></div></div>'.repeat(n)}</div>`;}
 
-function render(r){
-  const d=r.diagnostics, g=$('#grid');
-  $('#diag').innerHTML = [
-    `<span><b>${r.total_matched}</b> matched</span>`,
-    d.missing_age?`<span><b>${d.missing_age}</b> awaiting age/gender pass</span>`:'',
-    d.collapsed_near_duplicates?`<span><b>${d.collapsed_near_duplicates}</b> near-duplicates collapsed</span>`:'',
-    d.excluded_ood?`<span><b>${d.excluded_ood}</b> out-of-distribution hidden</span>`:'',
-    d.excluded_low_gender_confidence?`<span><b>${d.excluded_low_gender_confidence}</b> excluded: low gender confidence</span>`:'',
-    d.excluded_required_missing?`<span><b>${d.excluded_required_missing}</b> excluded: no age prediction</span>`:'',
-  ].filter(Boolean).join('');
-  const shown = FAVONLY ? RESULTS.filter(x=>(x.feedback||[]).includes('like')) : RESULTS;
-  g.innerHTML = shown.map((x,i)=>card(x,i)).join('');
-  $('#empty').hidden = shown.length>0;
-  $('#more').hidden = RESULTS.length >= r.total_matched;
-  [...g.children].forEach((el,i)=>{
-    el.onclick = e => { if(e.target.classList.contains('fav')) return; open(i); };
-    const f=el.querySelector('.fav'); if(f) f.onclick=e=>{e.stopPropagation();fav(shown[i],f);};
-  });
-}
+function onboarding(){ $('#view').innerHTML=`<div class="state">
+  <div class="ico">◳</div><h2>No images analysed yet</h2>
+  <p>Point Facet at a folder. It finds every face, scores it, and builds a searchable index.
+     Re-running later is incremental, so it only processes what changed.</p>
+  <button class="btn primary" onclick="document.querySelector('#tLib').click()">Add a folder →</button>
+  </div>`;}
+
+function noResults(d){ $('#view').innerHTML=`<div class="state">
+  <div class="ico">⌀</div><h2>Nothing matched</h2>
+  <p>${d&&d.excluded_ood?`${d.excluded_ood} faces were hidden as unreliable estimates. `:''}
+     Try lowering the attractiveness percentile, widening the age range, or reducing the
+     minimum face quality.</p>
+  <button class="btn" onclick="relax()">Loosen filters</button></div>`;}
+window.relax=()=>{$('#attrPct').value=0;$('#minQ').value=0;$('#ageMin').value=0;
+  $('#ageMax').value=99;$('#noOod').checked=false;syncMix();run();};
 
 function card(x,i){
   const liked=(x.feedback||[]).includes('like');
-  const attr = x.attractiveness==null?'—':x.attractiveness.toFixed(2);
-  const conf = x.confidence==null?'suppressed':Math.round(x.confidence*100)+'%';
-  return `<article class="card ${SEL.has(x.face_id)?'sel':''}">
-    <img loading="lazy" src="/api/crop/${x.face_id}?size=300" alt="detected face">
-    <div class="badge">${Math.round(x.relevance*100)}%</div>
-    <div class="fav ${liked?'on':''}" title="Favourite">${liked?'★':'☆'}</div>
-    <div class="bar"><i style="width:${Math.max(2,x.relevance*100)}%"></i></div>
-    <div class="meta">
-      <div>est. ${attr} / 5 · conf ${conf}</div>
-      <div class="chips">
-        ${x.age!=null?`<span class="chip">~${Math.round(x.age)} yr</span>`:'<span class="chip">age —</span>'}
-        ${x.gender?`<span class="chip">${x.gender}</span>`:''}
-        <span class="chip">q ${x.quality.toFixed(2)}</span>
-        ${x.ood?'<span class="chip warn">out-of-distribution</span>':''}
-      </div>
-    </div></article>`;
-}
-
-async function fav(x,el){
-  const on = el.classList.contains('on');
-  await api('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({face_id:x.face_id,kind:'like',remove:on})});
-  el.classList.toggle('on'); el.textContent = on?'☆':'★';
-  x.feedback = on ? (x.feedback||[]).filter(k=>k!=='like') : [...(x.feedback||[]),'like'];
-}
-
-let CUR=0;
-async function open(i){
-  CUR=i;
-  const shown = FAVONLY ? RESULTS.filter(x=>(x.feedback||[]).includes('like')) : RESULTS;
-  const x=shown[i]; if(!x) return;
-  const full = await api('/api/face/'+x.face_id);
-  $('#dimg').src = '/api/image/'+x.image_id+'?max_px=1400';
-  $('#dimg').onload = () => drawBox(x, full);
-  const b=full.predictions.beauty||{}, e=b.extra||{}, dist=b.distribution||[];
-  const q=full.quality_json||{};
-  const warn=[...(e.warnings||[])];
-  if(x.quality<0.3) warn.push('low face quality — predictions are less reliable');
-  if(full.face_px<60) warn.push('small face ('+Math.round(full.face_px)+' px)');
-  $('#dside').innerHTML = `
-    <h3 style="margin:0 0 4px">${x.path.split('/').pop()}</h3>
-    <div class="hint" style="word-break:break-all;margin-bottom:10px">${x.path}</div>
-    <dl class="kv">
-      <dt>Match</dt><dd>${(x.relevance*100).toFixed(1)}%</dd>
-      <dt>Est. attractiveness</dt><dd>${x.attractiveness?.toFixed(2) ?? '—'} / 5
-        ${x.attractiveness_percentile!=null?`<span class="chip">top ${Math.round((1-x.attractiveness_percentile)*100)}%</span>`:''}</dd>
-      <dt>P(rating ≥ 4)</dt><dd>${x.p_ge4!=null?(x.p_ge4*100).toFixed(0)+'%':'—'}</dd>
-      <dt>90% interval</dt><dd>${x.interval?`${x.interval[0].toFixed(2)} – ${x.interval[1].toFixed(2)}`:'<span class="chip warn">suppressed (out-of-distribution)</span>'}</dd>
-      <dt>Rater disagreement</dt><dd>${e.aleatoric!=null?e.aleatoric.toFixed(2):'—'}</dd>
-      <dt>Model disagreement</dt><dd>${e.epistemic!=null?e.epistemic.toFixed(3):'—'}</dd>
-      <dt>Est. age</dt><dd>${x.age!=null?Math.round(x.age)+' yr':'not predicted yet'}</dd>
-      <dt>Presenting as</dt><dd>${x.gender??'not predicted yet'}${x.gender_confidence?` (${Math.round(x.gender_confidence*100)}%)`:''}</dd>
-      <dt>Face quality</dt><dd>${x.quality.toFixed(2)} · ${Math.round(full.face_px)} px · det ${full.det_score?.toFixed(2)}</dd>
-    </dl>
-    ${dist.length?`<div class="hint">Predicted rating distribution</div>
-      <div class="dist">${dist.map((v,i)=>`<div style="height:${Math.max(3,v*100)}%"><span>${i+1}</span></div>`).join('')}</div>
-      <div style="height:14px"></div>`:''}
-    ${warn.length?`<div class="notice" style="margin:10px 0">${warn.map(w=>'⚠ '+w).join('<br>')}</div>`:''}
-    <div class="explain"><b>Why this ranked here</b>
-      ${x.contributions.map(c=>`<div class="l"><span>${c.criterion} — ${c.detail}</span>
-        <b>${c.contribution.toFixed(3)}</b></div>`).join('')}
-      <div class="l" style="border-top:1px solid var(--line);margin-top:5px;padding-top:5px">
-        <span>relevance</span><b>${x.relevance.toFixed(3)}</b></div></div>
-    <div class="explain"><b>Model &amp; provenance</b>
-      <div class="hint">${b.model_version??'—'}</div>
-      <div class="hint" style="margin-top:6px">${e.source??''}</div></div>
-    <div class="row" style="margin-top:12px">
-      <button onclick="fbk(${x.face_id},'like')">★ Favourite</button>
-      <button onclick="fbk(${x.face_id},'dislike')">Dislike</button>
-      <button onclick="fbk(${x.face_id},'wrong')">Prediction wrong</button>
+  const est=x.attractiveness==null?'—':x.attractiveness.toFixed(2);
+  return `<article class="card" data-i="${i}">
+    <div class="ph"><img loading="lazy" src="/api/crop/${x.face_id}?size=340"
+        onload="this.classList.add('on')" alt=""></div>
+    <div class="rank">${Math.round(x.relevance*100)}%</div>
+    <button class="star ${liked?'on':''}" data-fav="${x.face_id}" title="Favourite (F)">${liked?'★':'☆'}</button>
+    <div class="judge">
+      <button class="y" data-judge="like" data-id="${x.face_id}" title="More like this">♥ My type</button>
+      <button class="n" data-judge="dislike" data-id="${x.face_id}" title="Fewer like this">✕ Not for me</button>
     </div>
-    <div class="hint" style="margin-top:8px">
-      <kbd>←</kbd> <kbd>→</kbd> navigate · <kbd>F</kbd> favourite · <kbd>Esc</kbd> close</div>`;
+    <div class="meter"><i style="width:${Math.max(2,x.relevance*100)}%"></i></div>
+    <div class="body">
+      <div class="l1"><span class="est">${est}</span><span class="of">/ 5 est.</span></div>
+      <div class="l2">
+        ${x.age!=null?`<span class="tag">~${Math.round(x.age)}y</span>`:'<span class="tag dim">age —</span>'}
+        ${x.gender?`<span class="tag">${x.gender}</span>`:''}
+        <span class="tag dim">q ${x.quality.toFixed(2)}</span>
+        ${x.personal_percentile!=null?`<span class="tag mine" title="How well this matches your taught taste">you ${Math.round(x.personal_percentile*100)}%</span>`:''}
+        ${x.ood?'<span class="tag warn">unreliable</span>':''}
+      </div></div></article>`;
+}
+
+function render(diag){
+  if(!RES.length){ noResults(diag); return; }
+  const d=diag||{};
+  const pills=[
+    d.missing_age?`<span class="pill">${d.missing_age} without age</span>`:'',
+    d.collapsed_near_duplicates?`<span class="pill">${d.collapsed_near_duplicates} duplicates collapsed</span>`:'',
+    d.excluded_ood?`<span class="pill warn">${d.excluded_ood} unreliable hidden</span>`:'',
+    d.excluded_low_gender_confidence?`<span class="pill">${d.excluded_low_gender_confidence} low gender confidence</span>`:'',
+    d.excluded_required_missing?`<span class="pill">${d.excluded_required_missing} without an age estimate</span>`:'',
+  ].filter(Boolean).join('');
+  $('#view').innerHTML=`<div class="toolbar"><span class="count">${TOTAL.toLocaleString()}</span>
+      <span style="color:var(--fg2);font-size:13px">faces match</span>${pills}</div>
+    <div class="grid" style="--card:${DENS}px">${RES.map(card).join('')}</div>
+    ${RES.length<TOTAL?`<div style="text-align:center;margin-top:32px">
+      <button class="btn" id="more">Load ${Math.min(LIM,TOTAL-RES.length)} more</button></div>`:''}`;
+  $$('.card').forEach(el=>el.onclick=e=>{
+    const j=e.target.closest('[data-judge]');
+    if(j){ e.stopPropagation(); judge(+j.dataset.id, j.dataset.judge); return; }
+    if(e.target.dataset.fav){ e.stopPropagation(); fav(+e.target.dataset.fav,e.target); return; }
+    open(+el.dataset.i);});
+  if($('#more')) $('#more').onclick=()=>run(true);
+}
+
+async function run(more=false){
+  if(BUSY) return; BUSY=true;
+  try{
+    if(!STATS.ready){ onboarding(); return; }
+    OFF = more?OFF+LIM:0;
+    if(!more) skeleton();
+    const r=await api('/api/search',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify(spec(OFF))});
+    let list=r.results;
+    if($('#favOnly').checked) list=list.filter(x=>(x.feedback||[]).includes('like'));
+    RES = more?RES.concat(list):list; TOTAL=r.total_matched;
+    render(r.diagnostics);
+  }catch(e){ $('#view').innerHTML=`<div class="state"><div class="ico">⚠</div>
+      <h2>Search failed</h2><p>${e.message}</p></div>`; }
+  finally{ BUSY=false; }
+}
+
+async function fav(id,el){
+  const on=el.classList.contains('on');
+  await api('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({face_id:id,kind:'like',remove:on})});
+  el.classList.toggle('on'); el.textContent=on?'☆':'★';
+  const r=RES.find(x=>x.face_id===id);
+  if(r) r.feedback = on?[]:['like'];
+  toast(on?'Removed from favourites':'Added to favourites');
+}
+
+/* ---------- taught preference ---------- */
+async function judge(id,kind){
+  await api('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({face_id:id,kind})});
+  if(!$('#pOn').checked){ $('#pOn').checked=true; toast('Personalisation on — learning from you'); }
+  else toast(kind==='like'?'More like this':'Fewer like this');
+  await taste();
+  run();                     // re-rank immediately so the adjustment is visible
+}
+async function taste(){
+  let d; try{ d=await api('/api/preference'); }catch{ return; }
+  const on=$('#pOn').checked, a=(d.alpha||0)*(on?+$('#pStr').value:0);
+  const eff=Math.min(0.95,a);
+  $('#taste%').textContent = on? Math.round(eff*100)+'%' : 'off';
+  $('#tasteFill').style.width=(on?eff*100:0)+'%';
+  $('#tasteNote').textContent = d.note || 'Not taught yet.';
+  const refs=d.references||[];
+  $('#refList').innerHTML = refs.length? `<div class="reflist">${refs.map(r=>
+    `<span><b>${r.kind==='like'?'♥':'✕'}</b>${r.path.split('/').pop().slice(0,18)}
+      <button data-del="${r.id}">×</button></span>`).join('')}</div>` : '';
+  $$('#refList [data-del]').forEach(b=>b.onclick=async()=>{
+    await fetch('/api/preference/references/'+b.dataset.del,{method:'DELETE'});
+    taste(); run(); });
+}
+async function addRefs(kind){
+  const path=$('#refPath').value.trim(); if(!path) return toast('Enter an image or folder path');
+  toast('Reading reference faces…');
+  try{
+    const r=await api('/api/preference/references',{method:'POST',
+      headers:{'content-type':'application/json'},body:JSON.stringify({paths:[path],kind})});
+    toast(`Added ${r.added} reference face${r.added===1?'':'s'}`
+      + (r.skipped.length?` · ${r.skipped.length} skipped`:''));
+    if(r.added){ $('#pOn').checked=true; $('#refPath').value=''; await taste(); run(); }
+    else if(r.skipped.length) toast('None usable: '+r.skipped[0].reason);
+  }catch(e){ toast(e.message.slice(0,120)); }
+}
+$('#addRef').onclick=()=>addRefs('like');
+$('#addRefBad').onclick=()=>addRefs('dislike');
+$('#resetPref').onclick=async()=>{ if(!confirm('Forget everything Facet has learned about your taste?')) return;
+  await api('/api/preference/reset',{method:'POST'}); $('#pOn').checked=false;
+  await taste(); run(); toast('Preferences cleared'); };
+$('#pOn').onchange=()=>{taste();run();};
+$('#pStr').oninput=()=>{$('#pStrV').textContent=(+$('#pStr').value).toFixed(2).replace(/0$/,'')+'×';taste();};
+$('#pStr').onchange=()=>run();
+
+/* ---------- detail ---------- */
+async function open(i){
+  CUR=i; const x=RES[i]; if(!x) return;
   $('#dlg').showModal();
+  const full=await api('/api/face/'+x.face_id);
+  const img=$('#dimg'); img.src='/api/image/'+x.image_id+'?max_px=1600';
+  img.onload=()=>box(x,full);
+  const b=full.predictions.beauty||{}, e=b.extra||{}, dist=b.distribution||[];
+  const peak=dist.indexOf(Math.max(...dist));
+  const warn=[...(e.warnings||[])];
+  if(x.quality<0.3) warn.push('Low face quality — treat the estimate with extra caution.');
+  if(full.face_px<60) warn.push(`Small face (${Math.round(full.face_px)} px).`);
+  $('#panel').innerHTML=`
+    <div><h2>${x.path.split('/').pop()}</h2><div class="path">${x.path}</div></div>
+    <div><div class="big"><span class="v">${x.attractiveness?.toFixed(2)??'—'}</span>
+      <span class="u">/ 5 estimated</span></div>
+      <div class="note" style="margin-top:6px">${x.attractiveness_percentile!=null
+        ? `Top ${Math.round((1-x.attractiveness_percentile)*100)}% of your library`:''}
+        ${x.personal_percentile!=null
+          ? ` · matches your taste at ${Math.round(x.personal_percentile*100)}%`:''}</div></div>
+    ${dist.length?`<div class="block"><h4>Predicted rating spread</h4>
+      <div class="hist">${dist.map((v,i)=>`<div class="${i===peak?'peak':''}"
+        style="height:${Math.max(4,v*100)}%"><span>${i+1}</span></div>`).join('')}</div>
+      <div style="height:18px"></div>
+      <p class="note">How the rater pool is predicted to split. A wide spread means people
+      disagreed about faces like this one.</p></div>`:''}
+    <div class="block"><h4>Estimates</h4><dl class="rows">
+      <dt>Match score</dt><dd>${(x.relevance*100).toFixed(1)}%</dd>
+      <dt>P(rated 4+)</dt><dd>${x.p_ge4!=null?(x.p_ge4*100).toFixed(0)+'%':'—'}</dd>
+      <dt>90% interval</dt><dd>${x.interval?`${x.interval[0].toFixed(2)}–${x.interval[1].toFixed(2)}`
+        :'<span style="color:var(--warn)">suppressed</span>'}</dd>
+      <dt>Rater disagreement</dt><dd>${e.aleatoric?.toFixed(2)??'—'}</dd>
+      <dt>Model disagreement</dt><dd>${e.epistemic?.toFixed(3)??'—'}</dd>
+      <dt>Age</dt><dd>${x.age!=null?Math.round(x.age)+'y':'not estimated'}</dd>
+      <dt>Presenting as</dt><dd>${x.gender??'not estimated'}${x.gender_confidence
+        ?` (${Math.round(x.gender_confidence*100)}%)`:''}</dd>
+      <dt>Face quality</dt><dd>${x.quality.toFixed(2)} · ${Math.round(full.face_px)}px</dd>
+    </dl></div>
+    ${warn.length?`<div class="banner" style="margin:0">${warn.map(w=>'⚠ '+w).join('<br>')}</div>`:''}
+    <div class="block why"><h4>Why it ranked here</h4>
+      ${x.contributions.map(c=>`<div class="r"><span class="k">${c.criterion}
+        <div class="d">${c.detail}</div></span><span class="v">${c.contribution.toFixed(3)}</span></div>`).join('')}
+      <div class="r"><span class="k"><b>Total</b></span><span class="v">${x.relevance.toFixed(3)}</span></div>
+    </div>
+    <div class="block"><h4>Provenance</h4><p class="note">${e.source??''}</p>
+      <p class="note" style="margin-top:6px">Model: ${b.model_version??'—'}</p></div>
+    <div class="acts">
+      <button class="btn" data-fb="like">★ Favourite</button>
+      <button class="btn" data-fb="dislike">✕ Not for me</button>
+      <button class="btn" data-fb="wrong">Wrong</button></div>
+    <p class="note"><kbd>←</kbd><kbd>→</kbd> browse · <kbd>F</kbd> favourite · <kbd>Esc</kbd> close</p>`;
+  $$('#panel [data-fb]').forEach(b=>b.onclick=async()=>{
+    await api('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({face_id:x.face_id,kind:b.dataset.fb})});
+    b.textContent='✓ '+b.textContent.replace('✓ ',''); toast('Feedback saved');});
 }
-window.fbk = async (id,kind)=>{ await api('/api/feedback',{method:'POST',
-  headers:{'content-type':'application/json'},body:JSON.stringify({face_id:id,kind})});
-  const b=event.target; b.textContent='✓ '+b.textContent.replace('✓ ',''); };
-
-function drawBox(x, full){
-  const img=$('#dimg'), c=$('#dbox');
-  c.width=img.clientWidth; c.height=img.clientHeight;
-  c.style.width=img.clientWidth+'px'; c.style.height=img.clientHeight+'px';
-  c.style.left=img.offsetLeft+'px'; c.style.top=img.offsetTop+'px';
-  const sx=img.clientWidth/full.width, sy=img.clientHeight/full.height;
-  const g=c.getContext('2d'); g.clearRect(0,0,c.width,c.height);
-  g.strokeStyle=getComputedStyle(document.body).getPropertyValue('--accent');
-  g.lineWidth=2; g.strokeRect(x.bbox[0]*sx,x.bbox[1]*sy,(x.bbox[2]-x.bbox[0])*sx,(x.bbox[3]-x.bbox[1])*sy);
+function box(x,full){
+  const img=$('#dimg'), c=$('#dbox'), r=img.getBoundingClientRect(),
+        p=img.parentElement.getBoundingClientRect();
+  c.width=r.width; c.height=r.height;
+  c.style.cssText=`position:absolute;left:${r.left-p.left}px;top:${r.top-p.top}px;
+    width:${r.width}px;height:${r.height}px`;
+  const sx=r.width/full.width, sy=r.height/full.height, g=c.getContext('2d');
+  g.clearRect(0,0,c.width,c.height);
+  g.strokeStyle=getComputedStyle(document.body).getPropertyValue('--accent').trim();
+  g.lineWidth=2.5; g.setLineDash([7,5]);
+  g.strokeRect(x.bbox[0]*sx,x.bbox[1]*sy,(x.bbox[2]-x.bbox[0])*sx,(x.bbox[3]-x.bbox[1])*sy);
 }
+$('#prev').onclick=()=>CUR>0&&open(CUR-1);
+$('#next').onclick=()=>CUR<RES.length-1&&open(CUR+1);
+addEventListener('keydown',e=>{ if(!$('#dlg').open) return;
+  if(e.key==='ArrowLeft') $('#prev').click();
+  if(e.key==='ArrowRight') $('#next').click();
+  if(e.key.toLowerCase()==='f'){const el=$$('.card')[CUR]?.querySelector('.star'); el&&fav(+el.dataset.fav,el);}});
 
-document.addEventListener('keydown',e=>{
-  if(!$('#dlg').open) return;
-  const shown = FAVONLY ? RESULTS.filter(x=>(x.feedback||[]).includes('like')) : RESULTS;
-  if(e.key==='ArrowRight'&&CUR<shown.length-1) open(CUR+1);
-  if(e.key==='ArrowLeft'&&CUR>0) open(CUR-1);
-  if(e.key.toLowerCase()==='f'){ const el=$('#grid').children[CUR]?.querySelector('.fav'); el?.click(); }
-});
-
-// ---- indexing -------------------------------------------------------------
-$('#startIndex').onclick = async ()=>{
-  const roots=[$('#root').value.trim()].filter(Boolean);
-  if(!roots.length) return alert('Enter a directory path');
+/* ---------- library ---------- */
+$('#go').onclick=async()=>{
+  const r=$('#root').value.trim(); if(!r) return toast('Enter a folder path');
   try{ await api('/api/index',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({roots,limit:+$('#ilimit').value,force:$('#iforce').checked})});
-    poll(); }catch(err){ alert(err.message); }
+      body:JSON.stringify({roots:[r],limit:+$('#ilimit').value,force:$('#iforce').checked,
+        predict_age:$('#iage').checked})});
+    toast('Analysis started'); poll();
+  }catch(e){ toast(e.message.slice(0,120)); }
 };
+const STAGES=[['scanning and encoding','Finding & encoding faces'],
+  ['scoring attractiveness','Scoring attractiveness'],
+  ['estimating age and gender (slow)','Estimating age & gender'],
+  ['finding duplicates','Finding duplicates']];
 async function poll(){
-  const s=await api('/api/index/status');
-  const p=$('#iprog');
-  if(s.status==='idle'){ p.textContent='idle'; }
-  else if(s.running){
-    p.textContent=`${s.status}… ${s.indexed??0} indexed · ${s.faces??0} faces · ${s.failed??0} failed`;
-    $('#ibar').hidden=false; $('#ibar').removeAttribute('value');
-    setTimeout(poll,1000); return;
-  } else {
-    $('#ibar').hidden=true;
-    p.innerHTML = s.status==='failed' ? `<span style="color:var(--bad)">failed: ${s.error}</span>`
-      : `done — ${s.indexed} indexed, ${s.skipped} unchanged, ${s.faces} faces, ${s.failed} failed`
-        + (s.errors?.length?`<br><span class="hint">${s.errors.length} error(s): ${s.errors[0].error}</span>`:'');
-    stats();
-  }
+  let s; try{ s=await api('/api/index/status'); }catch{ return; }
+  const p=$('#prog');
+  if(s.status==='idle'){ p.textContent='Idle.'; return; }
+  if(s.status==='failed'){ p.innerHTML=`<span style="color:var(--bad)">Failed: ${s.error}</span>`; return; }
+  const at=STAGES.findIndex(x=>x[0]===s.stage);
+  p.innerHTML = (s.running?'<div class="prog"><i></i></div>':'')
+    + `<div class="stagelist">${STAGES.map(([k,label],i)=>
+        `<div class="${!s.running||i<at?'done':i===at?'now':''}">${!s.running||i<at?'✓':i===at?'▸':'·'} ${label}</div>`).join('')}</div>`
+    + `<p class="note" style="margin-top:10px">${s.indexed??0} images · ${s.faces??0} faces`
+    + (s.skipped?` · ${s.skipped} unchanged`:'') + (s.failed?` · <span style="color:var(--bad)">${s.failed} failed</span>`:'')
+    + '</p>' + (s.errors?.length?`<p class="note">e.g. ${s.errors[0].error}</p>`:'');
+  if(s.running){ setTimeout(poll,1200); }
+  else { await stats(); toast('Analysis complete'); run(); }
 }
 async function stats(){
-  const s=await api('/api/stats');
-  $('#stat').textContent=`${s.images.toLocaleString()} images · ${s.faces.toLocaleString()} faces · ${s.predictions.toLocaleString()} predictions`;
-  $('#istats').innerHTML = Object.entries(s.by_status||{}).map(([k,v])=>`${k}: <b>${v}</b>`).join(' · ')
-    + '<br>' + Object.entries(s.by_model||{}).map(([k,v])=>`${k}: <b>${v}</b>`).join(' · ');
+  STATS=await api('/api/stats');
+  $('#stats').innerHTML=`<span><b>${STATS.images.toLocaleString()}</b> images</span>
+    <span><b>${STATS.faces.toLocaleString()}</b> faces</span>
+    <span><b>${STATS.predictions.toLocaleString()}</b> estimates</span>`;
+  $('#lib').innerHTML=Object.entries(STATS.by_status||{}).map(([k,v])=>`${k}: <b>${v}</b>`).join(' · ')
+    +'<br>'+Object.entries(STATS.by_model||{}).map(([k,v])=>`${k}: <b>${v}</b>`).join(' · ')
+    + (STATS.beauty_head_trained?'':'<br><span style="color:var(--warn)">No trained attractiveness model — run scripts/train_beauty_head.py</span>');
 }
 
-// ---- saved searches / export / theme ---------------------------------------
+/* ---------- chrome wiring ---------- */
+const PRESETS={balanced:{a:.5,g:.3,s:.2},looks:{a:.9,g:.05,s:.05},
+  age:{a:.2,g:.7,s:.1},quality:{a:.4,g:.2,s:.2,q:.5}};
+$$('[data-pre]').forEach(b=>b.onclick=()=>{
+  const k=b.dataset.pre;
+  if(k==='reset'){ $('#attrW').value=.5;$('#ageW').value=.3;$('#genW').value=.2;
+    $('#attrPct').value=.7;$('#minQ').value=.2;$('#gender').value=''; }
+  else{ const p=PRESETS[k]; $('#attrW').value=p.a;$('#ageW').value=p.g;$('#genW').value=p.s;
+    if(p.q) $('#minQ').value=p.q; }
+  syncMix(); run();});
+['attrW','ageW','genW','attrPct','minQ'].forEach(id=>{
+  $('#'+id).oninput=syncMix; $('#'+id).onchange=()=>run();});
+['ageMin','ageMax','minPx','gender','genStrict','ageReq','noOod','dedup','favOnly','pathq','sort']
+  .forEach(id=>{const el=$('#'+id); el.onchange=()=>{syncMix();run();};});
+$('#dens').onclick=()=>{DENS=DENS===210?150:DENS===150?300:210;render(null);toast('Card size '+DENS+'px');};
+$('#theme').onclick=()=>{const d=document.documentElement;
+  d.dataset.theme=d.dataset.theme==='dark'?'light':'dark';
+  localStorage.setItem('t',d.dataset.theme);};
+$('#exp').onclick=async()=>{
+  const r=await fetch('/api/export?fmt=csv',{method:'POST',
+    headers:{'content-type':'application/json'},body:JSON.stringify({...spec(),limit:2000})});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(await r.blob());
+  a.download='facet_results.csv'; a.click(); toast('CSV exported (with provenance header)');};
+$('#tSearch').onclick=()=>tab(1); $('#tLib').onclick=()=>tab(0);
+function tab(s){ $('#pSearch').hidden=!s; $('#pLib').hidden=!!s;
+  $('#tSearch').ariaSelected=!!s; $('#tLib').ariaSelected=!s; if(!s) poll(); }
+$('#save').onclick=async()=>{const n=prompt('Name this search'); if(!n)return;
+  await api('/api/searches',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({name:n,spec:spec()})}); loadSaved(); toast('Saved');};
+$('#delSaved').onclick=async()=>{const n=$('#saved').value; if(!n)return;
+  await fetch('/api/searches/'+encodeURIComponent(n),{method:'DELETE'}); loadSaved(); toast('Deleted');};
 async function loadSaved(){
   const l=await api('/api/searches');
-  $('#saved').innerHTML='<option value="">— saved searches —</option>'+l.map(s=>`<option>${s.name}</option>`).join('');
-  $('#saved').onchange=()=>{ const s=l.find(x=>x.name===$('#saved').value); if(s) apply(s.spec); };
+  $('#saved').innerHTML='<option value="">— none selected —</option>'
+    +l.map(s=>`<option>${s.name}</option>`).join('');
+  $('#saved').onchange=()=>{const s=l.find(x=>x.name===$('#saved').value); if(!s)return;
+    const p=s.spec.preferences||{};
+    if(p.attractiveness){$('#attrPct').value=p.attractiveness.min_percentile;$('#attrW').value=p.attractiveness.weight;}
+    if(p.age){$('#ageMin').value=p.age.range[0];$('#ageMax').value=p.age.range[1];$('#ageW').value=p.age.weight;}
+    if(p.gender){$('#gender').value=p.gender.value;$('#genW').value=p.gender.weight;}
+    if(s.spec.filters){$('#minQ').value=s.spec.filters.min_quality??0;}
+    syncMix(); run();};
 }
-function apply(s){
-  const p=s.preferences||{};
-  if(p.age){ $('#ageMin').value=p.age.range[0]; $('#ageMax').value=p.age.range[1]; $('#ageW').value=p.age.weight; }
-  if(p.gender){ $('#gender').value=p.gender.value; $('#genW').value=p.gender.weight; }
-  if(p.attractiveness){ $('#attrPct').value=p.attractiveness.min_percentile; $('#attrW').value=p.attractiveness.weight; }
-  if(s.filters){ $('#minQ').value=s.filters.min_quality??0.3; $('#minPx').value=s.filters.min_face_px??60; }
-  syncLabels(); search();
-}
-$('#save').onclick=async()=>{ const n=prompt('Name this search'); if(!n) return;
-  await api('/api/searches',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({name:n,spec:spec()})}); loadSaved(); };
-$('#delSaved').onclick=async()=>{ const n=$('#saved').value; if(!n) return;
-  await fetch('/api/searches/'+encodeURIComponent(n),{method:'DELETE'}); loadSaved(); };
-$('#export').onclick=async()=>{
-  const r=await fetch('/api/export?fmt=csv',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({...spec(),limit:1000})});
-  const blob=await r.blob(), a=document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download='facet_results.csv'; a.click();
-};
-$('#showFavs').onclick=e=>{ FAVONLY=!FAVONLY; e.target.textContent=FAVONLY?'Show all':'Show favourites only'; render({total_matched:RESULTS.length,diagnostics:{}}); };
-$('#theme').onclick=()=>{ const d=document.documentElement;
-  d.dataset.theme = d.dataset.theme==='dark'?'light':'dark';
-  localStorage.setItem('facet-theme',d.dataset.theme); };
-$('#tab-search').onclick=()=>tab(true); $('#tab-index').onclick=()=>tab(false);
-function tab(searchOn){ $('#panel-search').hidden=!searchOn; $('#panel-index').hidden=searchOn;
-  $('#tab-search').ariaSelected=searchOn; $('#tab-index').ariaSelected=!searchOn; if(!searchOn) poll(); }
 
-function syncLabels(){
-  $('#ageWv').textContent=Math.round($('#ageW').value*100)+'%';
-  $('#genWv').textContent=Math.round($('#genW').value*100)+'%';
-  $('#attrWv').textContent=Math.round($('#attrW').value*100)+'%';
-  $('#attrPctv').textContent=pctLabel(+$('#attrPct').value);
-  $('#minQv').textContent=(+$('#minQ').value).toFixed(2);
-}
-['ageW','genW','attrW','attrPct','minQ'].forEach(id=>$('#'+id).oninput=syncLabels);
-$('#run').onclick=()=>search(); $('#more').onclick=()=>search(true);
-$('#sort').onchange=()=>search();
-
-(async function init(){
-  document.documentElement.dataset.theme = localStorage.getItem('facet-theme')||'dark';
-  syncLabels();
-  const a=await api('/api/about');
-  $('#notice').innerHTML = `<b>These are model estimates, not measurements.</b>
-    ${a.disclaimer.estimates_not_measurements}<br><br>${a.disclaimer.measured_skew}`;
-  await stats(); await loadSaved(); await search();
+(async function(){
+  document.documentElement.dataset.theme=localStorage.getItem('t')||'dark';
+  syncMix();
+  try{
+    const a=await api('/api/about');
+    $('#banner').hidden=false;
+    $('#banner').innerHTML=`<div><b>These are model estimates, not measurements.</b>
+      ${a.disclaimer.estimates_not_measurements} ${a.disclaimer.measured_skew}</div>
+      <button onclick="this.parentElement.hidden=true" title="Dismiss">×</button>`;
+    await stats(); await loadSaved(); await taste();
+    STATS.ready ? run() : onboarding();
+  }catch(e){ $('#view').innerHTML=`<div class="state"><div class="ico">⚠</div>
+    <h2>Can't reach the server</h2><p>${e.message}</p></div>`; }
 })();
 </script>
-</body>
-</html>
+</body></html>

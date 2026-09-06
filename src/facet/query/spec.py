@@ -66,6 +66,21 @@ class AttractivenessCriterion:
 
 
 @dataclass
+class Personalisation:
+    """Blend the user's own taste into the attractiveness ranking.
+
+    E14: the personal model rides on top of the population model rather than replacing it -
+    training on a user's labels alone is catastrophic cold-start. `strength` scales the
+    automatically-derived alpha (which grows with the number of labels), so a user can lean
+    harder on their own taste or dial it back without losing the population prior entirely.
+    """
+
+    enabled: bool = False
+    strength: float = 1.0
+    user: str = "default"
+
+
+@dataclass
 class Filters:
     """Hard constraints, applied before scoring."""
 
@@ -83,6 +98,7 @@ class QuerySpec:
     gender: GenderCriterion | None = None
     attractiveness: AttractivenessCriterion | None = None
     filters: Filters = field(default_factory=Filters)
+    personalisation: Personalisation = field(default_factory=Personalisation)
     sort_by: SortKey = "relevance"
     limit: int = 100
     offset: int = 0
@@ -96,6 +112,7 @@ class QuerySpec:
         prefs = d.get("preferences", d)
         spec = cls(
             filters=Filters(**(d.get("filters") or {})),
+            personalisation=Personalisation(**(d.get("personalisation") or {})),
             sort_by=d.get("sort_by", d.get("ranking", {}).get("sort_by", "relevance")),
             limit=int(d.get("limit", d.get("ranking", {}).get("limit", 100))),
             offset=int(d.get("offset", 0)),

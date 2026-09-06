@@ -144,3 +144,44 @@ def test_index_status_reports_idle(client):
 def test_ui_is_served(client):
     r = client.get("/")
     assert r.status_code == 200 and "Facet" in r.text
+
+
+# ---------------------------------------------------------------- personalisation
+
+def test_preference_starts_untaught(client):
+    d = client.get("/api/preference").json()
+    assert d["trained"] is False and d["alpha"] == 0.0
+    assert "Not taught yet" in d["note"]
+
+
+def test_feedback_teaches_the_preference_model(client):
+    """Liking and disliking indexed faces must produce a trained model."""
+    ids = [r["face_id"] for r in client.post("/api/search", json={"limit": 3}).json()["results"]]
+    client.post("/api/feedback", json={"face_id": ids[0], "kind": "like"})
+    client.post("/api/feedback", json={"face_id": ids[1], "kind": "dislike"})
+    d = client.get("/api/preference").json()
+    assert d["feedback"].get("like") == 1 and d["feedback"].get("dislike") == 1
+
+
+def test_reset_clears_learned_preferences(client):
+    ids = [r["face_id"] for r in client.post("/api/search", json={"limit": 2}).json()["results"]]
+    client.post("/api/feedback", json={"face_id": ids[0], "kind": "like"})
+    client.post("/api/preference/reset")
+    assert client.get("/api/preference").json()["feedback"] == {}
+
+
+def test_reference_paths_are_validated(client):
+    r = client.post("/api/preference/references",
+                    json={"paths": ["/definitely/not/a/real/image.jpg"], "kind": "like"})
+    assert r.status_code == 200
+    assert r.json()["added"] == 0 and r.json()["skipped"]
+
+
+def test_reference_rejects_bad_kind(client):
+    assert client.post("/api/preference/references",
+                       json={"paths": [], "kind": "nonsense"}).status_code == 400
+
+
+def test_search_reports_personalisation_state(client):
+    r = client.post("/api/search", json={"personalisation": {"enabled": True}, "limit": 3}).json()
+    assert "personalisation_alpha" in r["diagnostics"]

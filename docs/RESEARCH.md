@@ -1668,7 +1668,7 @@ absolute ratings, and it plugs straight into the Bradley–Terry machinery from 
 | **9 ✅** | Query + ranking engine | ✅ Built: `scripts/search.py`. The brief's example query works, every result explains its own arithmetic, and diagnostics report what was filtered. See [`docs/QUERY.md`](QUERY.md) |
 | **10 ✅** | API | ✅ FastAPI: search, media, background indexing, feedback, saved searches, export. Provenance travels with every payload. See [`docs/APP.md`](APP.md) |
 | **11 ✅** | UI | ✅ Single-file web app: index progress, weighted criteria, results grid, detail view with the ranking arithmetic, favourites, saved searches, export, dark mode, keyboard nav |
-| **12 ✅** | E14 personalisation — promoted to core by E7 | ✅ **conditional**: +0.025 Spearman at 100 labels in a *diverse* pool; actively harmful in a homogeneous one. Residual formulation confirmed; gate on population fit |
+| **12 ✅→shipped** | E14 personalisation — promoted to core by E7 | ✅ **conditional**: +0.025 Spearman at 100 labels in a *diverse* pool; actively harmful in a homogeneous one. Residual formulation confirmed; gate on population fit |
 | **13** | Optimisation, batching, ONNX/TensorRT | Throughput target on A6000 |
 
 Stage 5 is the real gate. Everything before it is research; everything after assumes the research

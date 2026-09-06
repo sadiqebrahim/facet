@@ -47,6 +47,7 @@ class Result:
     quality: float
     attractiveness: float | None
     attractiveness_percentile: float | None
+    personal_percentile: float | None
     p_ge4: float | None
     age: float | None
     gender: str | None
@@ -81,9 +82,66 @@ class SearchResponse:
 
 
 class SearchEngine:
-    def __init__(self, index_path: str | Path):
+    def __init__(self, index_path: str | Path, features_dir: str | Path | None = None):
         self.index = Index(index_path)
+        self.features_dir = Path(features_dir) if features_dir else None
         self._pct_cache: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+        self._store = None
+
+    # ------------------------------------------------------- personalisation
+
+    def store(self):
+        """Lazily open the feature shard the indexed faces reference."""
+        if self._store is not None or self.features_dir is None:
+            return self._store
+        import json as _json
+        import re as _re
+        row = self.index.conn.execute(
+            "SELECT encoder_version, crop_version, COUNT(*) n FROM faces "
+            "WHERE feature_row IS NOT NULL GROUP BY 1,2 ORDER BY n DESC LIMIT 1").fetchone()
+        if row is None:
+            return None
+        from ..pipeline.store import FeatureStore
+        slug = lambda x: _re.sub(r"[^A-Za-z0-9._-]+", "_", x)
+        meta = self.features_dir / f"{slug(row['encoder_version'])}__{slug(row['crop_version'])}.json"
+        if not meta.exists():
+            return None
+        self._store = FeatureStore(self.features_dir, row["encoder_version"],
+                                   row["crop_version"], dim=_json.loads(meta.read_text())["dim"])
+        return self._store
+
+    def preference_model(self, user: str = "default"):
+        """Build the user's preference model from their feedback and reference faces.
+
+        Rebuilt per search rather than cached: fitting is milliseconds over cached
+        embeddings, and a user who just clicked reject expects the next search to reflect it.
+        That immediacy is only affordable because of the encode/predict split (15.1).
+        """
+        from ..models.preference import PreferenceModel
+
+        store = self.store()
+        if store is None:
+            return None
+        rows = list(self.index.conn.execute(
+            "SELECT f.feature_row, fb.kind FROM feedback fb JOIN faces f ON f.id=fb.face_id "
+            "WHERE fb.user=? AND fb.kind IN ('like','dislike') AND f.feature_row IS NOT NULL",
+            (user,)))
+        refs = self.index.references(user)
+        dim = store.dim
+        liked, disliked = [], []
+        for r in rows:
+            v = store.take([r["feature_row"]])[0]
+            (liked if r["kind"] == "like" else disliked).append(v)
+        for r in refs:
+            if r["feature"].size == dim:
+                (liked if r["kind"] == "like" else disliked).append(r["feature"])
+        if not liked and not disliked:
+            return None
+        m = PreferenceModel(dim).fit(
+            np.array(liked) if liked else np.zeros((0, dim)),
+            np.array(disliked) if disliked else np.zeros((0, dim)),
+            n_references=len(refs))
+        return m
 
     # ------------------------------------------------------------ collection stats
 
@@ -132,7 +190,7 @@ class SearchEngine:
 
         sql = f"""
             SELECT f.id face_id, f.image_id, i.path, f.x1, f.y1, f.x2, f.y2,
-                   f.quality, f.face_px, f.det_score,
+                   f.quality, f.face_px, f.det_score, f.feature_row,
                    b.value beauty, b.confidence bconf, b.interval_lo, b.interval_hi,
                    b.extra bextra,
                    a.value age, g.value p_female, g.confidence gconf,
@@ -153,6 +211,33 @@ class SearchEngine:
             "excluded_ood": 0, "excluded_low_gender_confidence": 0,
             "excluded_required_missing": 0, "collapsed_near_duplicates": 0,
         }
+
+        # ---- personalisation ------------------------------------------------------
+        # Scored over ALL candidates first, so the personal percentile is relative to the
+        # whole collection rather than to whatever survived the filters.
+        pers_pct: dict[int, float] = {}
+        pers_alpha = 0.0
+        pers_status = None
+        if spec.personalisation.enabled:
+            pm = self.preference_model(spec.personalisation.user)
+            store = self.store()
+            if pm is not None and store is not None:
+                scored = [r for r in rows if r["feature_row"] is not None]
+                idxs = [r["feature_row"] for r in scored]
+                ids = [r["face_id"] for r in scored]
+                if idxs:
+                    scores = pm.score(store.take(idxs))
+                    p = percentile_ranks(scores)
+                    pers_pct = dict(zip(ids, p))
+                    pers_alpha = float(np.clip(
+                        pm.alpha() * spec.personalisation.strength, 0.0, 0.95))
+                    pers_status = pm.status()
+        diag["personalisation_alpha"] = round(pers_alpha, 4)
+        if pers_status is not None:
+            diag["personalisation"] = {
+                "likes": pers_status.n_likes, "dislikes": pers_status.n_dislikes,
+                "references": pers_status.n_references, "method": pers_status.method,
+                "note": pers_status.note}
 
         seen_dup: set[int] = set()
         results: list[Result] = []
@@ -228,6 +313,13 @@ class SearchEngine:
                 key = "p_ge4" if c.use_p_ge4 else "mean"
                 raw = extra.get("p_ge4") if c.use_p_ge4 else r["beauty"]
                 pct = self._to_percentile(key, raw)
+                # Blend the user's taste on top of the population estimate (E14's residual
+                # formulation). alpha grows with how much the user has taught it and is
+                # capped, so the population model never drops out entirely.
+                pop_pct = pct
+                if pers_alpha > 0 and r["face_id"] in pers_pct:
+                    pct = float((1 - pers_alpha) * (pct if pct is not None else 0.5)
+                                + pers_alpha * pers_pct[r["face_id"]])
                 m = attractiveness_match(pct, c.min_percentile)
                 if m is None:
                     diag["missing_attractiveness"] += 1
@@ -239,11 +331,16 @@ class SearchEngine:
                     conf = 1.0
                     if spec.confidence_weighting:
                         conf = 0.5 if ood else float(r["bconf"] or 0.5)
+                    detail = (f"percentile {pct:.2f} of collection, wanted top "
+                              f"{100*(1-c.min_percentile):.0f}%")
+                    if pers_alpha > 0 and r["face_id"] in pers_pct:
+                        detail += (f" — blended {int(pers_alpha*100)}% your taste "
+                                   f"(yours {pers_pct[r['face_id']]:.2f}, "
+                                   f"population {pop_pct:.2f})")
+                    if ood:
+                        detail += " (out-of-distribution: confidence suppressed)"
                     contribs.append(Contribution(
-                        "attractiveness", m, conf, c.weight, c.weight * m * conf,
-                        f"percentile {pct:.2f} of collection, wanted top "
-                        f"{100*(1-c.min_percentile):.0f}%"
-                        + (" (out-of-distribution: confidence suppressed)" if ood else "")))
+                        "attractiveness", m, conf, c.weight, c.weight * m * conf, detail))
             if drop:
                 continue
 
@@ -253,6 +350,7 @@ class SearchEngine:
                 relevance=combine(contribs, total_w),
                 quality=float(r["quality"] or 0.0),
                 attractiveness=r["beauty"], attractiveness_percentile=pct,
+                personal_percentile=pers_pct.get(r["face_id"]),
                 p_ge4=extra.get("p_ge4"),
                 age=r["age"],
                 gender=(None if r["p_female"] is None

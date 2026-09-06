@@ -135,6 +135,19 @@ that produced its rank**. Favourites, saved searches, CSV export, dark mode and 
 navigation are included. Everything stays on the machine — the API makes no outbound request
 and binds to localhost. Details: [`docs/APP.md`](docs/APP.md).
 
+## Teaching it your taste
+
+Beauty is subjective — the dataset behind the population model has an inter-rater correlation
+of just 0.77, and two reasonable rater pools disagreed on 80 % of a top-100. So you can teach
+it yours, either by pointing at reference faces you like (works from one example) or by rating
+results with ♥ / ✕. Ranking updates immediately.
+
+Measured on 386 real faces: teaching it the five faces the population model ranked **worst**
+lifted them from positions 382–386 to **80–260**; rejecting the population model's top 8
+dropped them from positions **1–8 to 257–333**. The blend is capped so the population model
+never fully drops out — E14 found a personal model trained alone is catastrophic at cold
+start. Details: [`docs/APP.md`](docs/APP.md#personalisation--teaching-it-your-taste).
+
 ## Documentation
 
 | Document | Contents |

@@ -22,6 +22,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from pydantic import BaseModel
@@ -51,6 +52,10 @@ class IndexRequest(BaseModel):
     roots: list[str]
     limit: int = 0
     force: bool = False
+    #: Age/gender is ~190x the cost of the rest (E4), so it is opt-out and quality-gated.
+    predict_age: bool = True
+    min_quality: float = 0.35
+    age_limit: int = 0
 
 
 class FeedbackRequest(BaseModel):
@@ -59,6 +64,14 @@ class FeedbackRequest(BaseModel):
     note: str | None = None
     user: str = "default"
     remove: bool = False
+
+
+class ReferenceRequest(BaseModel):
+    """Teach the preference model from example images the user picks."""
+
+    paths: list[str]
+    kind: str = "like"          # like | dislike
+    user: str = "default"
 
 
 class SaveSearchRequest(BaseModel):
@@ -77,27 +90,84 @@ class IndexJob:
     def running(self) -> bool:
         return self.thread is not None and self.thread.is_alive()
 
-    def start(self, index_path, features_dir, roots, limit, force):
+    def start(self, index_path, features_dir, roots, limit, force,
+              predict_age=True, min_quality=0.35, age_limit=0):
         if self.running():
             raise HTTPException(409, "an indexing run is already in progress")
 
         def work():
+            """Run the WHOLE pipeline, not just the index pass.
+
+            The index/predict split is right architecturally (15.1) but it was wrong as a
+            product: indexing alone leaves every face with no attractiveness, age or gender,
+            so the UI showed a grid of dashes and 0% matches and looked broken. One user
+            action should produce usable results.
+
+            Stages are reported separately so progress stays legible, and age/gender is
+            still gated - E4 measured MiVOLO at ~190x the cost of everything else, so it
+            runs on the best faces rather than all of them.
+            """
             from ..pipeline.indexer import IndexConfig, Indexer
+
+            def set(**kw):
+                with self.lock:
+                    self.state.update(**kw)
+
             try:
                 with self.lock:
-                    self.state = {"status": "loading models", "started_at": time.time()}
+                    self.state = {"status": "running", "stage": "loading models",
+                                  "started_at": time.time(), "stages": {}}
                 ix = Indexer(index_path, features_dir, IndexConfig())
-                with self.lock:
-                    self.state.update(status="scanning", encoder=ix.encoder_version)
+                set(encoder=ix.encoder_version)
+
+                set(stage="scanning and encoding")
                 st = ix.index_directories(roots, force=force, limit=limit)
                 with self.lock:
-                    self.state = {"status": "done", "finished_at": time.time(),
-                                  **{k: v for k, v in st.__dict__.items() if k != "errors"},
-                                  "errors": st.errors[:20]}
+                    self.state["stages"]["index"] = {
+                        k: v for k, v in st.__dict__.items() if k != "errors"}
+                    self.state.update(indexed=st.indexed, skipped=st.skipped,
+                                      faces=st.faces, failed=st.failed,
+                                      errors=st.errors[:20])
                 ix.close()
+
+                # --- predictions over the cached features ------------------------
+                import sys as _sys
+                _sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "scripts"))
+                from predict_attributes import open_store, run_age, run_beauty, run_dupes
+
+                idx = Index(index_path)
+                try:
+                    store, _, _ = open_store(Path(features_dir), idx)
+                except SystemExit:
+                    store = None
+
+                if store is not None:
+                    head = Path(__file__).resolve().parents[3] / "artifacts/models/beauty_head.npz"
+                    if head.exists():
+                        set(stage="scoring attractiveness")
+                        with self.lock:
+                            self.state["stages"]["beauty"] = run_beauty(idx, store, head)
+                    else:
+                        with self.lock:
+                            self.state["stages"]["beauty"] = {
+                                "skipped": "no trained head at artifacts/models/beauty_head.npz "
+                                           "- run scripts/train_beauty_head.py"}
+                    if predict_age:
+                        set(stage="estimating age and gender (slow)")
+                        with self.lock:
+                            self.state["stages"]["age"] = run_age(idx, min_quality, age_limit)
+                    set(stage="finding duplicates")
+                    with self.lock:
+                        self.state["stages"]["dupes"] = run_dupes(idx, store, 0.92)
+                idx.close()
+
+                set(status="done", stage="done", finished_at=time.time())
             except Exception as e:  # noqa: BLE001 - surface failures to the UI
+                import traceback
                 with self.lock:
-                    self.state = {"status": "failed", "error": f"{type(e).__name__}: {e}"}
+                    self.state.update(status="failed", stage="failed",
+                                      error=f"{type(e).__name__}: {e}",
+                                      traceback=traceback.format_exc()[-1200:])
 
         self.thread = threading.Thread(target=work, daemon=True)
         self.thread.start()
@@ -115,7 +185,9 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
         if not Path(index_path).exists():
             raise HTTPException(404, f"no index at {index_path} - run an index first")
         if getattr(local, "eng", None) is None:
-            local.eng = SearchEngine(index_path)      # sqlite conns are per-thread
+            # features_dir is needed for personalisation: the preference model is fitted
+            # over the same cached embeddings the ranking already uses.
+            local.eng = SearchEngine(index_path, features_dir)   # sqlite conns are per-thread
         return local.eng
 
     def db() -> Index:
@@ -132,6 +204,10 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
     @app.get("/api/stats")
     def stats():
         s = db().stats()
+        s["ready"] = s["faces"] > 0
+        s["has_predictions"] = s["predictions"] > 0
+        s["beauty_head_trained"] = (
+            Path(__file__).resolve().parents[3] / "artifacts/models/beauty_head.npz").exists()
         s["index_path"] = str(index_path)
         s["saved_searches"] = len(db().list_saved_searches())
         s["feedback"] = db().conn.execute("SELECT COUNT(*) FROM feedback").fetchone()[0]
@@ -211,7 +287,8 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
             if not Path(r).expanduser().is_dir():
                 raise HTTPException(400, f"not a directory: {r}")
         return job.start(index_path, features_dir,
-                         [str(Path(r).expanduser()) for r in req.roots], req.limit, req.force)
+                         [str(Path(r).expanduser()) for r in req.roots], req.limit, req.force,
+                         req.predict_age, req.min_quality, req.age_limit)
 
     @app.get("/api/index/status")
     def index_status():
@@ -245,6 +322,100 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
     def delete_search(name: str):
         db().delete_saved_search(name)
         return {"ok": True}
+
+    # -------------------------------------------------------- personalisation
+
+    _enc: dict = {}
+
+    def encoder():
+        """Detector + embedder for reference images, loaded once and reused.
+
+        Reference faces must be encoded exactly as indexed faces were, or the preference
+        model would be comparing vectors from different preprocessing - the same class of
+        error the versioned feature shards exist to prevent.
+        """
+        if not _enc:
+            from ..models.insightface_backend import (
+                ArcFaceEmbedder, InsightFaceDetector, align_to_template)
+            from ..pipeline.indexer import IndexConfig
+            cfg = IndexConfig()
+            _enc["cfg"] = cfg
+            _enc["det"] = InsightFaceDetector(pack=cfg.pack, det_size=cfg.det_size,
+                                              pad_frac=cfg.pad_frac)
+            _enc["arc"] = ArcFaceEmbedder(pack=cfg.pack)
+            _enc["align"] = align_to_template
+            if cfg.clip:
+                from ..models.clip_backend import ClipEmbedder
+                _enc["clip"] = ClipEmbedder()
+        return _enc
+
+    @app.get("/api/preference")
+    def preference(user: str = "default"):
+        eng = engine()
+        pm = eng.preference_model(user)
+        refs = [{"id": r["id"], "path": r["path"], "kind": r["kind"]}
+                for r in db().references(user)]
+        fb = db().conn.execute(
+            "SELECT kind, COUNT(*) n FROM feedback WHERE user=? GROUP BY kind",
+            (user,)).fetchall()
+        out = {"references": refs, "feedback": {r["kind"]: r["n"] for r in fb},
+               "trained": pm is not None}
+        if pm is not None:
+            st = pm.status()
+            out.update(alpha=st.alpha, method=st.method, note=st.note,
+                       n_likes=st.n_likes, n_dislikes=st.n_dislikes)
+        else:
+            out["note"] = ("Not taught yet. Add reference faces you find attractive, or "
+                           "rate results with ★ / Not for me.")
+            out["alpha"] = 0.0
+        return out
+
+    @app.post("/api/preference/references")
+    def add_references(req: ReferenceRequest):
+        import cv2
+        if req.kind not in {"like", "dislike"}:
+            raise HTTPException(400, "kind must be like or dislike")
+        e = encoder()
+        added, skipped = [], []
+        for raw in req.paths:
+            path = Path(raw).expanduser()
+            files = ([p for p in sorted(path.iterdir())
+                      if p.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp", ".bmp"}]
+                     if path.is_dir() else [path])
+            if not files:
+                skipped.append({"path": str(path), "reason": "no images found"})
+            for f in files:
+                img = cv2.imread(str(f))
+                if img is None:
+                    skipped.append({"path": str(f), "reason": "could not read"})
+                    continue
+                dets = e["det"].detect(img)
+                if not dets:
+                    skipped.append({"path": str(f), "reason": "no face detected"})
+                    continue
+                cfg = e["cfg"]
+                crop = e["align"](img, dets[0].keypoints, size=cfg.crop_size,
+                                  margin=cfg.crop_margin)
+                vec = e["arc"].encode(np.stack([crop]))[0]
+                if "clip" in e:
+                    vec = np.concatenate([vec, e["clip"].encode(np.stack([crop]))[0]])
+                db().add_reference(str(f), 0, vec, req.kind, req.user)
+                added.append(str(f))
+        return {"added": len(added), "skipped": skipped,
+                "total_references": len(db().references(req.user))}
+
+    @app.delete("/api/preference/references/{ref_id}")
+    def delete_reference(ref_id: int, user: str = "default"):
+        db().delete_reference(ref_id, user)
+        return {"ok": True}
+
+    @app.post("/api/preference/reset")
+    def reset_preference(user: str = "default"):
+        n = db().clear_references(user)
+        db().conn.execute("DELETE FROM feedback WHERE user=? AND kind IN ('like','dislike')",
+                          (user,))
+        db().conn.commit()
+        return {"ok": True, "cleared_references": n}
 
     # ----------------------------------------------------------------- export
 
