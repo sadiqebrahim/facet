@@ -287,3 +287,73 @@ def test_users_cannot_read_each_others_taste(client):
                         json={"limit": 50, "personalisation": {"user": "aaa"}},
                         headers=hb).json()
     assert fid in [r["face_id"] for r in spoof["results"]], "server must override the user"
+
+
+# ---------------------------------------------------------------------- admin
+
+def test_first_account_becomes_the_administrator(client):
+    r = client.post("/api/auth/register",
+                    json={"username": "boss", "password": "secret123"}).json()
+    h = {"Authorization": f"Bearer {r['token']}"}
+    assert client.get("/api/auth/me", headers=h).json()["is_admin"] is True
+    assert client.get("/api/auth/status").json()["admins"] == ["boss"]
+
+
+def test_second_account_is_not_an_administrator(client):
+    a = client.post("/api/auth/register", json={"username": "boss", "password": "secret123"}).json()
+    b = client.post("/api/auth/register", json={"username": "bob", "password": "secret123"}).json()
+    hb = {"Authorization": f"Bearer {b['token']}"}
+    assert client.get("/api/auth/me", headers=hb).json()["is_admin"] is False
+    assert client.get("/api/admin/users", headers=hb).status_code == 403
+
+
+def test_admin_can_create_and_reset(client):
+    a = client.post("/api/auth/register", json={"username": "boss", "password": "secret123"}).json()
+    ha = {"Authorization": f"Bearer {a['token']}"}
+    assert client.post("/api/admin/users",
+                       json={"username": "newbie", "password": "temp1234"},
+                       headers=ha).status_code == 200
+    tok = client.post("/api/auth/login",
+                      json={"username": "newbie", "password": "temp1234"}).json()["token"]
+    hn = {"Authorization": f"Bearer {tok}"}
+    assert client.get("/api/auth/me", headers=hn).json()["must_change_password"] is True
+    # an admin reset must invalidate the user's live sessions
+    client.post("/api/auth/password",
+                json={"username": "newbie", "new_password": "reset9999"}, headers=ha)
+    assert client.get("/api/auth/me", headers=hn).status_code == 401
+
+
+def test_self_service_password_change_requires_the_current_one(client):
+    a = client.post("/api/auth/register", json={"username": "boss", "password": "secret123"}).json()
+    ha = {"Authorization": f"Bearer {a['token']}"}
+    assert client.post("/api/auth/password",
+                       json={"current_password": "wrong", "new_password": "another1"},
+                       headers=ha).status_code == 401
+    r = client.post("/api/auth/password",
+                    json={"current_password": "secret123", "new_password": "another1"},
+                    headers=ha)
+    assert r.status_code == 200 and r.json()["token"]
+
+
+def test_admin_guard_rails(client):
+    a = client.post("/api/auth/register", json={"username": "boss", "password": "secret123"}).json()
+    ha = {"Authorization": f"Bearer {a['token']}"}
+    assert client.delete("/api/admin/users/boss", headers=ha).status_code == 400
+    assert client.post("/api/admin/role",
+                       json={"username": "boss", "make_admin": False},
+                       headers=ha).status_code == 400
+
+
+def test_deleting_a_user_removes_their_learned_preferences(client):
+    a = client.post("/api/auth/register", json={"username": "boss", "password": "secret123"}).json()
+    b = client.post("/api/auth/register", json={"username": "bob", "password": "secret123"}).json()
+    ha = {"Authorization": f"Bearer {a['token']}"}
+    hb = {"Authorization": f"Bearer {b['token']}"}
+    fid = client.post("/api/search", json={"limit": 1}, headers=hb).json()["results"][0]["face_id"]
+    client.post("/api/feedback",
+                json={"face_id": fid, "kind": "like", "undo_seconds": 0}, headers=hb)
+    assert client.delete("/api/admin/users/bob", headers=ha).status_code == 200
+    # deletion must actually delete (docs/LICENSING.md 4.2)
+    assert client.get("/api/admin/users", headers=ha).json()["users"] == [
+        u for u in client.get("/api/admin/users", headers=ha).json()["users"]
+        if u["username"] != "bob"]

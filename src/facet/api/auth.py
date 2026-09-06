@@ -53,7 +53,12 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL,
     salt          TEXT NOT NULL,
     display_name  TEXT,
-    created_at    REAL
+    created_at    REAL,
+    -- The first account created becomes the administrator. There is no email here to send
+    -- a reset link to, so "forgot password" means asking that person - which only works if
+    -- the UI can tell you who they are.
+    is_admin      INTEGER NOT NULL DEFAULT 0,
+    must_change   INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS sessions (
     token      TEXT PRIMARY KEY,
@@ -71,6 +76,24 @@ class Accounts:
     def __init__(self, conn):
         self.conn = conn
         self.conn.executescript(SCHEMA)
+        self._migrate()
+        self.conn.commit()
+
+    def _migrate(self) -> None:
+        cols = {r[1] for r in self.conn.execute("PRAGMA table_info(users)")}
+        for col, ddl in (("is_admin", "INTEGER NOT NULL DEFAULT 0"),
+                         ("must_change", "INTEGER NOT NULL DEFAULT 0")):
+            if col not in cols:
+                self.conn.execute(f"ALTER TABLE users ADD COLUMN {col} {ddl}")
+        # An index created before roles existed has no admin; promote the earliest account
+        # so the "contact the admin" path always has somebody to name.
+        if cols and not self.conn.execute(
+                "SELECT 1 FROM users WHERE is_admin=1").fetchone():
+            r = self.conn.execute(
+                "SELECT username FROM users ORDER BY created_at LIMIT 1").fetchone()
+            if r:
+                self.conn.execute("UPDATE users SET is_admin=1 WHERE username=?",
+                                  (r["username"],))
         self.conn.commit()
 
     def count(self) -> int:
@@ -80,12 +103,58 @@ class Accounts:
         return self.conn.execute("SELECT 1 FROM users WHERE username=?",
                                  (username,)).fetchone() is not None
 
-    def create(self, username: str, password: str, display_name: str | None = None) -> None:
+    def create(self, username: str, password: str, display_name: str | None = None,
+               is_admin: bool | None = None) -> None:
+        h, s = hash_password(password)
+        admin = self.count() == 0 if is_admin is None else is_admin
+        self.conn.execute(
+            "INSERT INTO users(username,password_hash,salt,display_name,created_at,is_admin) "
+            "VALUES(?,?,?,?,?,?)",
+            (username, h, s, display_name or username, time.time(), int(admin)))
+        self.conn.commit()
+
+    def is_admin(self, username: str) -> bool:
+        r = self.conn.execute("SELECT is_admin FROM users WHERE username=?",
+                              (username,)).fetchone()
+        return bool(r and r["is_admin"])
+
+    def admins(self) -> list[str]:
+        return [r["username"] for r in
+                self.conn.execute("SELECT username FROM users WHERE is_admin=1")]
+
+    def set_password(self, username: str, password: str, must_change: bool = True) -> None:
         h, s = hash_password(password)
         self.conn.execute(
-            "INSERT INTO users(username,password_hash,salt,display_name,created_at) "
-            "VALUES(?,?,?,?,?)", (username, h, s, display_name or username, time.time()))
+            "UPDATE users SET password_hash=?, salt=?, must_change=? WHERE username=?",
+            (h, s, int(must_change), username))
+        # Any existing session is invalidated: a reset the user did not perform themselves
+        # should not leave a live session behind.
+        self.conn.execute("DELETE FROM sessions WHERE username=?", (username,))
         self.conn.commit()
+
+    def set_admin(self, username: str, admin: bool) -> None:
+        self.conn.execute("UPDATE users SET is_admin=? WHERE username=?",
+                          (int(admin), username))
+        self.conn.commit()
+
+    def delete(self, username: str) -> None:
+        self.conn.execute("DELETE FROM sessions WHERE username=?", (username,))
+        self.conn.execute("DELETE FROM users WHERE username=?", (username,))
+        self.conn.commit()
+
+    def clear_must_change(self, username: str) -> None:
+        self.conn.execute("UPDATE users SET must_change=0 WHERE username=?", (username,))
+        self.conn.commit()
+
+    def must_change(self, username: str) -> bool:
+        r = self.conn.execute("SELECT must_change FROM users WHERE username=?",
+                              (username,)).fetchone()
+        return bool(r and r["must_change"])
+
+    def details(self) -> list[dict]:
+        return [dict(r) for r in self.conn.execute(
+            "SELECT username, display_name, created_at, is_admin, must_change "
+            "FROM users ORDER BY is_admin DESC, username")]
 
     def check(self, username: str, password: str) -> bool:
         r = self.conn.execute("SELECT password_hash, salt FROM users WHERE username=?",

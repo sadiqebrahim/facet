@@ -83,6 +83,17 @@ class Credentials(BaseModel):
     display_name: str | None = None
 
 
+class PasswordChange(BaseModel):
+    current_password: str | None = None
+    new_password: str
+    username: str | None = None      # admin only: reset somebody else's
+
+
+class AdminUserAction(BaseModel):
+    username: str
+    make_admin: bool | None = None
+
+
 class ReferenceRequest(BaseModel):
     """Teach the preference model from example images the user picks."""
 
@@ -217,6 +228,11 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
             local.acc = Accounts(db().conn)
         return local.acc
 
+    def require_admin(user: str) -> str:
+        if not accounts().is_admin(user):
+            raise HTTPException(403, "administrator access required")
+        return user
+
     def current_user(authorization: str | None = Header(default=None)) -> str:
         """Resolve the caller.
 
@@ -246,6 +262,11 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
         user = acc.resolve(token)
         return {"accounts_exist": acc.count() > 0, "authenticated": user is not None,
                 "user": user, "open_mode": acc.count() == 0,
+                "is_admin": bool(user and acc.is_admin(user)),
+                "must_change_password": bool(user and acc.must_change(user)),
+                # Named so "forgot password" has somewhere to point: there is no mail server
+                # here, so a reset means asking a person.
+                "admins": acc.admins(),
                 "note": ("No accounts yet - running in open mode under a shared profile. "
                          "Create an account to get a taste model of your own."
                          if acc.count() == 0 else "")}
@@ -286,7 +307,112 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
 
     @app.get("/api/auth/me")
     def me(user: str = Depends(current_user)):
-        return {"user": user, **accounts().info(user)}
+        acc = accounts()
+        return {"user": user, "is_admin": acc.is_admin(user),
+                "must_change_password": acc.must_change(user), **acc.info(user)}
+
+    @app.post("/api/auth/password")
+    def change_password(req: PasswordChange, user: str = Depends(current_user)):
+        """Change your own password, or - as an admin - reset somebody else's."""
+        acc = accounts()
+        target = req.username or user
+        if len(req.new_password) < 6:
+            raise HTTPException(400, "password must be at least 6 characters")
+        if target != user:
+            require_admin(user)
+        elif not (req.current_password and acc.check(user, req.current_password)):
+            raise HTTPException(401, "current password is wrong")
+        if not acc.exists(target):
+            raise HTTPException(404, "no such user")
+        # A self-service change should not force another change; an admin reset should.
+        acc.set_password(target, req.new_password, must_change=(target != user))
+        if target == user:
+            acc.clear_must_change(user)
+            return {"ok": True, "token": acc.start_session(user),
+                    "note": "password changed; other sessions were signed out"}
+        return {"ok": True, "note": f"{target} must set a new password at next sign-in"}
+
+    # ----------------------------------------------------------------- admin
+
+    @app.get("/api/admin/users")
+    def admin_users(user: str = Depends(current_user)):
+        require_admin(user)
+        acc, ix = accounts(), db()
+        rows = acc.details()
+        for r in rows:
+            r["likes"] = ix.conn.execute(
+                "SELECT COUNT(*) FROM feedback WHERE user=? AND kind='like'",
+                (r["username"],)).fetchone()[0]
+            r["dislikes"] = ix.conn.execute(
+                "SELECT COUNT(*) FROM feedback WHERE user=? AND kind='dislike'",
+                (r["username"],)).fetchone()[0]
+            r["references"] = ix.conn.execute(
+                "SELECT COUNT(*) FROM reference_faces WHERE user=?",
+                (r["username"],)).fetchone()[0]
+            r["sessions"] = ix.conn.execute(
+                "SELECT COUNT(*) FROM sessions WHERE username=? AND expires_at > ?",
+                (r["username"], __import__("time").time())).fetchone()[0]
+        return {"users": rows, "you": user}
+
+    @app.post("/api/admin/users")
+    def admin_create(c: Credentials, user: str = Depends(current_user)):
+        require_admin(user)
+        acc = accounts()
+        if not valid_username(c.username):
+            raise HTTPException(400, "username must be 2-32 chars: letters, digits, . _ -")
+        if len(c.password) < 6:
+            raise HTTPException(400, "password must be at least 6 characters")
+        if acc.exists(c.username):
+            raise HTTPException(409, "that username is taken")
+        acc.create(c.username, c.password, c.display_name, is_admin=False)
+        acc.set_password(c.username, c.password, must_change=True)
+        return {"ok": True, "note": f"{c.username} created; they must set a new password"}
+
+    @app.post("/api/admin/role")
+    def admin_role(req: AdminUserAction, user: str = Depends(current_user)):
+        require_admin(user)
+        acc = accounts()
+        if not acc.exists(req.username):
+            raise HTTPException(404, "no such user")
+        if req.make_admin is False and acc.admins() == [req.username]:
+            raise HTTPException(400, "that is the only administrator")
+        acc.set_admin(req.username, bool(req.make_admin))
+        return {"ok": True}
+
+    @app.delete("/api/admin/users/{username}")
+    def admin_delete(username: str, user: str = Depends(current_user)):
+        require_admin(user)
+        acc = accounts()
+        if username == user:
+            raise HTTPException(400, "you cannot delete your own account")
+        if not acc.exists(username):
+            raise HTTPException(404, "no such user")
+        if acc.is_admin(username) and len(acc.admins()) == 1:
+            raise HTTPException(400, "that is the only administrator")
+        ix = db()
+        # Deleting an account removes the biometric-derived data it accumulated, per
+        # docs/LICENSING.md section 4.2: deletion must actually delete.
+        for t in ("feedback", "reference_faces"):
+            ix.conn.execute(f"DELETE FROM {t} WHERE user=?", (username,))
+        ix.conn.commit()
+        acc.delete(username)
+        return {"ok": True, "note": "account and all learned preferences removed"}
+
+    @app.get("/api/admin/overview")
+    def admin_overview(user: str = Depends(current_user)):
+        require_admin(user)
+        ix, acc = db(), accounts()
+        st = ix.stats()
+        st["users"] = acc.count()
+        st["admins"] = acc.admins()
+        st["errors"] = [dict(r) for r in ix.conn.execute(
+            "SELECT path, error FROM images WHERE status IN ('corrupt','unreadable') LIMIT 25")]
+        st["runs"] = [dict(r) for r in ix.conn.execute(
+            "SELECT id, started_at, finished_at, n_indexed, n_faces, n_failed, status "
+            "FROM runs ORDER BY id DESC LIMIT 10")]
+        st["feature_shards"] = sorted(
+            p.name for p in Path(features_dir).glob("*.json")) if Path(features_dir).is_dir() else []
+        return st
 
     # ------------------------------------------------------------------ meta
 

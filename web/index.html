@@ -181,108 +181,6 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px var(--acc
 .state h2{font-size:19px;margin-bottom:var(--s2)}
 .state p{color:var(--fg2);margin:0 0 var(--s5);line-height:1.6;font-size:13.5px}
 
-/* ---------- accounts ---------- */
-let MODE='login';
-function showGate(msg){ $('#gate').hidden=false; if(msg) $('#gErr').textContent=msg; }
-function hideGate(){ $('#gate').hidden=true; $('#gErr').textContent=''; }
-$('#gSwap').onclick=()=>{ MODE=MODE==='login'?'register':'login';
-  $('#gGo').textContent=MODE==='login'?'Sign in':'Create account';
-  $('#gSwap').textContent=MODE==='login'?'Create an account instead':'I already have an account';
-  $('#gPass').autocomplete=MODE==='login'?'current-password':'new-password';
-  $('#gErr').textContent=''; };
-$('#gateForm').onsubmit=async e=>{
-  e.preventDefault(); $('#gErr').textContent='';
-  try{
-    const r=await api('/api/auth/'+MODE,{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({username:$('#gUser').value.trim(),password:$('#gPass').value})});
-    TOKEN=r.token; localStorage.setItem('facet-token',TOKEN);
-    hideGate();
-    if(r.migrated_default_profile) toast('Your existing preferences moved to this account');
-    await boot();
-  }catch(err){ $('#gErr').textContent=err.message.replace(/^\{.*"detail":"?/,'').replace(/"?\}$/,''); }
-};
-$('#logout').onclick=async()=>{
-  try{ await api('/api/auth/logout',{method:'POST'}); }catch{}
-  TOKEN=''; localStorage.removeItem('facet-token'); location.reload();
-};
-
-/* ---------- undo ---------- */
-let UNDO=null;
-function undoSecs(){ return +$('#undoSec').value; }
-function offerUndo(faceId, kind, secs){
-  clearTimeout(UNDO?.t); clearInterval(UNDO?.i);
-  const t=$('#toast'); const label=kind==='like'?'Liked':'Rejected';
-  const total=Math.max(secs,0.001); let left=secs;
-  t.innerHTML=`<span class="undoBar">
-    <svg class="undoRing" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="9"/>
-      <circle class="fg" cx="12" cy="12" r="9" stroke-dasharray="56.5" stroke-dashoffset="0"/></svg>
-    <span>${label} — learning in <b id="undoLeft">${secs}</b>s</span>
-    <button id="undoBtn">Undo</button></span>`;
-  t.classList.add('on');
-  const ring=t.querySelector('.fg');
-  UNDO={faceId,kind,
-    i:setInterval(()=>{ left=Math.max(0,left-0.1);
-      const el=t.querySelector('#undoLeft'); if(el) el.textContent=Math.ceil(left);
-      if(ring) ring.style.strokeDashoffset=String(56.5*(1-left/total));
-    },100),
-    t:setTimeout(()=>{ clearInterval(UNDO.i); t.classList.remove('on'); UNDO=null; run(); }, secs*1000)};
-  t.querySelector('#undoBtn').onclick=async()=>{
-    clearTimeout(UNDO.t); clearInterval(UNDO.i); t.classList.remove('on');
-    await api('/api/feedback/undo',{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({face_id:faceId,kind})});
-    UNDO=null; toast('Reversed — nothing was learned'); await taste(); run();
-  };
-}
-
-/* ---------- taught preference ---------- */
-async function judge(id,kind){
-  const secs=undoSecs();
-  const r=await api('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({face_id:id,kind,undo_seconds:secs})});
-  if(!$('#pOn').checked) $('#pOn').checked=true;
-  // Remove it from view at once - the point of rejecting is not to see it again - while
-  // the model only learns once the undo window closes.
-  RES=RES.filter(x=>x.face_id!==id); TOTAL=Math.max(0,TOTAL-1); render(LASTDIAG);
-  if(secs>0) offerUndo(id,kind,secs);
-  else { toast(kind==='like'?'More like this':'Fewer like this'); await taste(); run(); }
-}
-async function taste(){
-  let d; try{ d=await api('/api/preference'); }catch{ return; }
-  const on=$('#pOn').checked, a=(d.alpha||0)*(on?+$('#pStr').value:0);
-  const eff=Math.min(0.95,a);
-  $('#taste%').textContent = on? Math.round(eff*100)+'%' : 'off';
-  $('#tasteFill').style.width=(on?eff*100:0)+'%';
-  $('#tasteNote').textContent = d.note || 'Not taught yet.';
-  const refs=d.references||[];
-  $('#refList').innerHTML = refs.length? `<div class="reflist">${refs.map(r=>
-    `<span><b>${r.kind==='like'?'♥':'✕'}</b>${r.path.split('/').pop().slice(0,18)}
-      <button data-del="${r.id}">×</button></span>`).join('')}</div>` : '';
-  $$('#refList [data-del]').forEach(b=>b.onclick=async()=>{
-    await fetch('/api/preference/references/'+b.dataset.del,{method:'DELETE'});
-    taste(); run(); });
-}
-async function addRefs(kind){
-  const path=$('#refPath').value.trim(); if(!path) return toast('Enter an image or folder path');
-  toast('Reading reference faces…');
-  try{
-    const r=await api('/api/preference/references',{method:'POST',
-      headers:{'content-type':'application/json'},body:JSON.stringify({paths:[path],kind})});
-    toast(`Added ${r.added} reference face${r.added===1?'':'s'}`
-      + (r.skipped.length?` · ${r.skipped.length} skipped`:''));
-    if(r.added){ $('#pOn').checked=true; $('#refPath').value=''; await taste(); run(); }
-    else if(r.skipped.length) toast('None usable: '+r.skipped[0].reason);
-  }catch(e){ toast(e.message.slice(0,120)); }
-}
-$('#addRef').onclick=()=>addRefs('like');
-$('#addRefBad').onclick=()=>addRefs('dislike');
-$('#resetPref').onclick=async()=>{ if(!confirm('Forget everything Facet has learned about your taste?')) return;
-  await api('/api/preference/reset',{method:'POST'}); $('#pOn').checked=false;
-  await taste(); run(); toast('Preferences cleared'); };
-$('#pOn').onchange=()=>{taste();run();};
-$('#pStr').oninput=()=>{$('#pStrV').textContent=(+$('#pStr').value).toFixed(2).replace(/0$/,'')+'×';taste();};
-$('#pStr').onchange=()=>run();
-$('#undoSec').oninput=()=>{const v=undoSecs();
-  $('#undoSecV').textContent=v===0?'off':v+'s'; localStorage.setItem('facet-undo',v);};
 
 /* ---------- detail ---------- */
 dialog{border:0;padding:0;background:transparent;max-width:none;max-height:none;width:100%;height:100%}
@@ -326,6 +224,25 @@ dialog::backdrop{background:rgba(4,6,10,.86);backdrop-filter:blur(3px)}
   padding:var(--s5);box-shadow:var(--shadow)}
 .gatebox input{background:var(--surface2);border:1px solid var(--line);
   border-radius:var(--r1);padding:11px 12px;font-size:15px}
+.pw{position:relative;display:flex}
+.pw input{flex:1;padding-right:44px}
+.eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;
+  font-size:15px;opacity:.55;padding:6px 8px;line-height:1}
+.eye:hover,.eye.on{opacity:1}
+.linkbtn{background:none;border:0;color:var(--accent);font-size:12.5px;text-align:center;
+  padding:2px;text-decoration:underline;text-underline-offset:2px}
+.utable{width:100%;border-collapse:collapse;font-size:12.5px}
+.utable th{text-align:left;color:var(--fg3);font-weight:600;font-size:10.5px;
+  text-transform:uppercase;letter-spacing:.07em;padding:0 0 6px}
+.utable td{padding:7px 0;border-top:1px solid var(--line);vertical-align:middle}
+.utable td:last-child{text-align:right;white-space:nowrap}
+.utable .me{color:var(--accent)}
+.rolechip{font-size:10px;background:var(--accent-dim);color:var(--accent);
+  border-radius:20px;padding:1px 7px;margin-left:5px}
+.mini{background:var(--surface2);border:1px solid var(--line);border-radius:5px;
+  padding:4px 8px;font-size:11.5px;margin-left:4px}
+.mini:hover{border-color:var(--accent)}
+.mini.danger:hover{border-color:var(--bad);color:var(--bad)}
 .who{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--fg2)}
 .who b{color:var(--fg)}
 .undoBar{display:flex;align-items:center;gap:var(--s3)}
@@ -470,10 +387,15 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
     <div class="brand" style="font-size:18px;margin-bottom:4px"><span class="dot"></span> Facet</div>
     <p class="note" id="gateNote">Sign in to use your own taste model.</p>
     <input type="text" id="gUser" placeholder="Username" autocomplete="username" required>
-    <input type="password" id="gPass" placeholder="Password" autocomplete="current-password" required>
+    <div class="pw"><input type="password" id="gPass" placeholder="Password"
+        autocomplete="current-password" required>
+      <button type="button" class="eye" id="gEye" aria-label="Show password"
+        title="Show password">👁</button></div>
     <button class="btn primary" type="submit" id="gGo">Sign in</button>
     <button class="btn" type="button" id="gSwap">Create an account instead</button>
+    <button class="linkbtn" type="button" id="gForgot">Forgot your password?</button>
     <p class="note" id="gErr" style="color:var(--bad)"></p>
+    <p class="note" id="gHelp" hidden></p>
     <p class="note">Each account keeps its own likes, rejects and reference faces, so one
       person's taste never bleeds into another's.</p>
   </form>
@@ -487,6 +409,7 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
   <div class="seg" role="tablist">
     <button id="tSearch" aria-selected="true">Search</button>
     <button id="tLib" aria-selected="false">Library</button>
+    <button id="tAdmin" aria-selected="false" hidden>Admin</button>
   </div>
 
   <!-- ============ SEARCH ============ -->
@@ -511,7 +434,7 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
     </div>
 
     <div class="sect" id="tasteSect">
-      <h3>Your taste <span class="w" id="taste%">off</span></h3>
+      <h3>Your taste <span class="w" id="tastePct">off</span></h3>
       <div class="f"><label>Personalise ranking</label>
         <span class="sw"><input type="checkbox" id="pOn"><i></i></span></div>
       <div class="f"><label>Lean on my taste</label>
@@ -604,6 +527,30 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
   </div>
 
   <!-- ============ LIBRARY ============ -->
+  <div id="pAdmin" hidden>
+    <div class="sect">
+      <h3>Users</h3>
+      <div id="uList" class="note">—</div>
+    </div>
+    <div class="sect">
+      <h3>Add a user</h3>
+      <div class="f"><input type="text" id="nuName" placeholder="username"></div>
+      <div class="f"><input type="text" id="nuPass" placeholder="temporary password"></div>
+      <button class="btn primary" id="nuGo" style="width:100%">Create user</button>
+      <p class="note">They will be asked to choose a new password when they first sign in.</p>
+    </div>
+    <div class="sect">
+      <h3>Change my password</h3>
+      <div class="f"><input type="password" id="pwOld" placeholder="current password"></div>
+      <div class="f"><input type="password" id="pwNew" placeholder="new password"></div>
+      <button class="btn" id="pwGo" style="width:100%">Update password</button>
+    </div>
+    <div class="sect">
+      <h3>System</h3>
+      <div id="sysStats" class="note">—</div>
+    </div>
+  </div>
+
   <div id="pLib" hidden>
     <div class="sect">
       <h3>Add images</h3>
@@ -807,6 +754,21 @@ async function fav(id,el){
 let MODE='login';
 function showGate(msg){ $('#gate').hidden=false; if(msg) $('#gErr').textContent=msg; }
 function hideGate(){ $('#gate').hidden=true; $('#gErr').textContent=''; }
+$('#gEye').onclick=()=>{ const i=$('#gPass'), e=$('#gEye');
+  const show = i.type==='password';
+  i.type = show?'text':'password'; e.classList.toggle('on',show);
+  e.setAttribute('aria-label', show?'Hide password':'Show password'); i.focus(); };
+$('#gForgot').onclick=async()=>{
+  const h=$('#gHelp'); h.hidden=false;
+  try{
+    const st=await fetch('/api/auth/status').then(r=>r.json());
+    h.innerHTML = st.admins && st.admins.length
+      ? `There is no email server here, so passwords cannot be reset by link. Ask an
+         administrator (<b>${st.admins.join(', ')}</b>) to set a new one for you — they can
+         do it from the Admin panel, and you will choose your own on next sign-in.`
+      : 'No administrator account exists yet. Create the first account — it becomes the admin.';
+  }catch{ h.textContent='Cannot reach the server.'; }
+};
 $('#gSwap').onclick=()=>{ MODE=MODE==='login'?'register':'login';
   $('#gGo').textContent=MODE==='login'?'Sign in':'Create account';
   $('#gSwap').textContent=MODE==='login'?'Create an account instead':'I already have an account';
@@ -872,7 +834,7 @@ async function taste(){
   let d; try{ d=await api('/api/preference'); }catch{ return; }
   const on=$('#pOn').checked, a=(d.alpha||0)*(on?+$('#pStr').value:0);
   const eff=Math.min(0.95,a);
-  $('#taste%').textContent = on? Math.round(eff*100)+'%' : 'off';
+  $('#tastePct').textContent = on? Math.round(eff*100)+'%' : 'off';
   $('#tasteFill').style.width=(on?eff*100:0)+'%';
   $('#tasteNote').textContent = d.note || 'Not taught yet.';
   const refs=d.references||[];
@@ -1080,9 +1042,72 @@ $('#exp').onclick=async()=>{
     headers:{'content-type':'application/json'},body:JSON.stringify({...spec(),limit:2000})});
   const a=document.createElement('a'); a.href=URL.createObjectURL(await r.blob());
   a.download='facet_results.csv'; a.click(); toast('CSV exported (with provenance header)');};
-$('#tSearch').onclick=()=>tab(1); $('#tLib').onclick=()=>tab(0);
-function tab(s){ $('#pSearch').hidden=!s; $('#pLib').hidden=!!s;
-  $('#tSearch').ariaSelected=!!s; $('#tLib').ariaSelected=!s; if(!s) poll(); }
+$('#tSearch').onclick=()=>tab('search'); $('#tLib').onclick=()=>tab('lib');
+$('#tAdmin').onclick=()=>tab('admin');
+function tab(which){
+  const w = which===true?'search':which===false?'lib':which;
+  $('#pSearch').hidden = w!=='search';
+  $('#pLib').hidden    = w!=='lib';
+  $('#pAdmin').hidden  = w!=='admin';
+  $('#tSearch').ariaSelected = w==='search';
+  $('#tLib').ariaSelected    = w==='lib';
+  $('#tAdmin').ariaSelected  = w==='admin';
+  if(w==='lib') poll();
+  if(w==='admin') adminLoad();
+}
+
+/* ---------- admin ---------- */
+async function adminLoad(){
+  try{
+    const d=await api('/api/admin/users');
+    $('#uList').innerHTML=`<table class="utable">
+      <tr><th>User</th><th>Taught</th><th></th></tr>
+      ${d.users.map(u=>`<tr>
+        <td class="${u.username===d.you?'me':''}">${u.username}
+          ${u.is_admin?'<span class="rolechip">admin</span>':''}
+          ${u.must_change?'<span class="rolechip" style="background:#4a3a12;color:var(--warn)">must reset</span>':''}</td>
+        <td>${u.likes}♥ ${u.dislikes}✕ ${u.references}★</td>
+        <td>
+          <button class="mini" data-reset="${u.username}">Reset&nbsp;pw</button>
+          ${u.username!==d.you?`<button class="mini" data-role="${u.username}" data-mk="${u.is_admin?0:1}">${u.is_admin?'Demote':'Make admin'}</button>
+          <button class="mini danger" data-del="${u.username}">Delete</button>`:''}
+        </td></tr>`).join('')}</table>`;
+    $$('#uList [data-reset]').forEach(b=>b.onclick=async()=>{
+      const np=prompt(`New temporary password for ${b.dataset.reset} (min 6 chars)`);
+      if(!np) return;
+      try{ const r=await api('/api/auth/password',{method:'POST',
+        headers:{'content-type':'application/json'},
+        body:JSON.stringify({username:b.dataset.reset,new_password:np})});
+        toast(r.note); adminLoad(); }catch(e){ toast(e.message.slice(0,120)); }});
+    $$('#uList [data-role]').forEach(b=>b.onclick=async()=>{
+      try{ await api('/api/admin/role',{method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({username:b.dataset.role,make_admin:b.dataset.mk==='1'})});
+        adminLoad(); toast('Role updated'); }catch(e){ toast(e.message.slice(0,120)); }});
+    $$('#uList [data-del]').forEach(b=>b.onclick=async()=>{
+      if(!confirm(`Delete ${b.dataset.del}? Their likes, rejects and reference faces are removed too.`)) return;
+      try{ await api('/api/admin/users/'+encodeURIComponent(b.dataset.del),{method:'DELETE'});
+        adminLoad(); toast('Account deleted'); }catch(e){ toast(e.message.slice(0,120)); }});
+
+    const o=await api('/api/admin/overview');
+    $('#sysStats').innerHTML=`${o.images.toLocaleString()} images · ${o.faces.toLocaleString()} faces
+      · ${o.predictions.toLocaleString()} estimates<br>${o.users} user(s) · admins: ${o.admins.join(', ')}
+      <br>shards: ${o.feature_shards.length}
+      ${o.errors.length?`<br><span style="color:var(--bad)">${o.errors.length} unreadable file(s)</span>`:''}`;
+  }catch(e){ $('#uList').innerHTML=`<span style="color:var(--bad)">${e.message.slice(0,140)}</span>`; }
+}
+$('#nuGo').onclick=async()=>{
+  try{ const r=await api('/api/admin/users',{method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({username:$('#nuName').value.trim(),password:$('#nuPass').value})});
+    $('#nuName').value=$('#nuPass').value=''; toast(r.note); adminLoad();
+  }catch(e){ toast(e.message.slice(0,140)); }};
+$('#pwGo').onclick=async()=>{
+  try{ const r=await api('/api/auth/password',{method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({current_password:$('#pwOld').value,new_password:$('#pwNew').value})});
+    if(r.token){ TOKEN=r.token; localStorage.setItem('facet-token',TOKEN); }
+    $('#pwOld').value=$('#pwNew').value=''; toast(r.note||'Password updated');
+  }catch(e){ toast(e.message.slice(0,140)); }};
 $('#save').onclick=async()=>{const n=prompt('Name this search'); if(!n)return;
   await api('/api/searches',{method:'POST',headers:{'content-type':'application/json'},
     body:JSON.stringify({name:n,spec:spec()})}); loadSaved(); toast('Saved');};
@@ -1109,9 +1134,15 @@ async function boot(){
     <button onclick="this.parentElement.hidden=true" title="Dismiss">×</button>`;
   let who;
   try{ who=await api('/api/auth/status'); }catch{ who={open_mode:true}; }
-  $('#who').innerHTML = who.user ? `Signed in as <b>${who.user}</b>`
+  $('#who').innerHTML = who.user
+    ? `Signed in as <b>${who.user}</b>${who.is_admin?'<span class="rolechip">admin</span>':''}`
     : 'Open mode — <b>no account</b>. Create one for a private taste model.';
   $('#logout').style.display = who.user ? '' : 'none';
+  $('#tAdmin').hidden = !who.is_admin;
+  if(who.must_change_password){
+    tab('admin');
+    toast('An administrator reset your password — please set a new one');
+  }
   await stats(); await loadSaved(); await taste();
   STATS.ready ? run() : onboarding();
 }

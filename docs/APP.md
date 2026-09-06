@@ -85,6 +85,24 @@ random 256-bit tokens with a 30-day expiry.
 clear. Put it behind a VPN or an HTTPS reverse proxy — which is what `serve.py` prints when
 you bind beyond localhost.
 
+### Roles, resets and the admin panel
+
+The **first account created becomes the administrator**. There is no mail server here, so
+"forgot password" cannot send a link — instead the login screen's *Forgot your password?*
+names the administrator(s) to ask, and the admin panel lets them set a new one. A password
+the admin resets is marked *must change*, so the user picks their own at next sign-in, and
+**all of that user's live sessions are invalidated** — a reset the user did not perform
+themselves should not leave a session behind.
+
+The Admin tab (visible only to admins) lists every account with how much each has taught its
+model, and allows: create user, reset password, promote/demote, delete. Guard rails prevent
+deleting your own account or removing the last administrator. **Deleting an account also
+deletes its likes, rejects and reference faces** — `LICENSING.md §4.2` requires that deletion
+actually deletes.
+
+Password fields have a reveal toggle, since a typo in a masked field is the most common
+reason a correct password appears to fail.
+
 ## Reaching it from another device
 
 ```bash
