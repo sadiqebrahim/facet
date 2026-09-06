@@ -79,8 +79,9 @@ button{cursor:pointer}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 
 .shell{display:grid;grid-template-columns:var(--sidebar) 1fr;min-height:calc(100vh - 56px)}
-aside{background:var(--surface);border-right:1px solid var(--line);
-  position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto;padding:var(--s4)}
+aside{background:var(--bg);border-right:1px solid var(--line);
+  position:sticky;top:60px;height:calc(100vh - 60px);overflow-y:auto;padding:var(--s4);
+  scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
 aside{scrollbar-width:thin;scrollbar-color:var(--line2) transparent}  /* Firefox */
 aside::-webkit-scrollbar{width:9px}
 aside::-webkit-scrollbar-thumb{background:var(--line2);border-radius:9px}
@@ -95,42 +96,50 @@ main{padding:var(--s5) var(--s5) 64px;max-width:1800px}
 .seg button:hover{color:var(--fg)}
 .seg button[aria-selected=true]{background:var(--surface);color:var(--accent);
   box-shadow:var(--shadow)}
-.sect{border-top:1px solid var(--line);padding:var(--s4) 0}
-.sect:first-of-type{border-top:0;padding-top:0}
-.sect > h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--fg2);
-  font-weight:700;margin-bottom:var(--s3);display:flex;align-items:center;gap:var(--s2)}
-.sect > h3 .w{margin-left:auto;color:var(--accent);font-variant-numeric:tabular-nums;
-  font-size:11px;background:var(--accent-dim);padding:2px 8px;border-radius:20px;
-  letter-spacing:0;font-weight:650}
-.f{display:flex;align-items:center;gap:var(--s2);margin:var(--s2) 0}
-.f > label{flex:1;font-size:13px;color:var(--fg2);font-weight:500}
-.f input[type=number]{width:60px;background:var(--surface2);border:1px solid var(--line);
-  border-radius:var(--r1);padding:5px 7px;text-align:center;font-variant-numeric:tabular-nums}
-.f select{flex:1;background:var(--surface2);border:1px solid var(--line);
-  border-radius:var(--r1);padding:6px 8px}
-.f input[type=text]{flex:1;background:var(--surface2);border:1px solid var(--line);
-  border-radius:var(--r1);padding:7px 9px}
-/* Range styling needs both vendor trees - Firefox ignores the -webkit- pseudo-elements
-   entirely and would otherwise render a default platform slider. */
-input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;flex:1;height:18px}
-input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:3px;background:var(--line2)}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-5px;
-  border-radius:50%;background:var(--accent);border:2px solid var(--surface);box-shadow:var(--shadow)}
-input[type=range]::-moz-range-track{height:4px;border-radius:3px;background:var(--line2);border:0}
-input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
-  background:var(--accent);border:2px solid var(--surface);box-shadow:var(--shadow)}
-input[type=range]::-moz-range-progress{height:4px;border-radius:3px;background:var(--accent-dim)}
-input[type=range]:focus{outline:none}
-input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--accent-dim)}
-input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px var(--accent-dim)}
-.num{min-width:42px;text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--fg)}
-.sw{position:relative;width:34px;height:19px;flex:none}
-.sw input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
-.sw i{position:absolute;inset:0;background:var(--line2);border-radius:20px;transition:.15s}
-.sw i::after{content:"";position:absolute;left:2px;top:2px;width:15px;height:15px;border-radius:50%;
-  background:#fff;transition:.15s}
-.sw input:checked + i{background:var(--accent)}
-.sw input:checked + i::after{transform:translateX(15px)}
+/* Collapsible groups. <details>/<summary> is native, keyboard-accessible and needs no
+   script - the panel was one long undifferentiated column before, which is what made it
+   feel crowded. */
+.sect{border:1px solid var(--line);border-radius:var(--r2);background:var(--surface);
+  margin-bottom:var(--s2);overflow:hidden}
+.sect > summary{list-style:none;cursor:pointer;padding:12px var(--s4);display:flex;
+  align-items:center;gap:var(--s2);font-size:12.5px;font-weight:650;color:var(--fg);
+  user-select:none;transition:background .12s}
+.sect > summary::-webkit-details-marker{display:none}
+.sect > summary::after{content:"⌄";margin-left:auto;color:var(--fg3);font-size:14px;
+  transition:transform .18s;line-height:1}
+.sect[open] > summary::after{transform:rotate(180deg)}
+.sect > summary:hover{background:var(--surface2)}
+.sect[open] > summary{border-bottom:1px solid var(--line)}
+.sect > .body{padding:var(--s4);display:flex;flex-direction:column;gap:var(--s2)}
+.sect .w{margin-left:auto;margin-right:var(--s2);color:var(--accent);
+  font-variant-numeric:tabular-nums;font-size:11px;background:var(--accent-dim);
+  padding:2px 8px;border-radius:20px;font-weight:650}
+.sect .hr{height:1px;background:var(--line);margin:var(--s2) 0}
+.lbl{font-size:12px;color:var(--fg2);font-weight:550}
+.wide{width:100%}
+.unit{font-size:11.5px;color:var(--fg3)}
+.sep{color:var(--fg3)}
+.btnrow{display:flex;gap:var(--s2)}
+.btn.sm{padding:7px 10px;font-size:12px;flex:1}
+.btn.ghost{background:transparent}
+
+/* Applied selections, surfaced above the groups so nothing hides in a collapsed section. */
+.applied{display:flex;flex-wrap:wrap;gap:var(--s1);margin-bottom:var(--s3);min-height:0}
+.applied:empty{display:none}
+.applied span{font-size:11px;background:var(--accent-dim);color:var(--accent);
+  border-radius:20px;padding:3px 10px;font-weight:600;display:flex;align-items:center;gap:5px}
+.applied span button{background:none;border:0;color:inherit;padding:0;font-size:13px;
+  line-height:1;opacity:.65}
+.applied span button:hover{opacity:1}
+
+.mstat{display:grid;grid-template-columns:auto 1fr;gap:6px var(--s3);font-size:11.5px}
+.mstat dt{color:var(--fg3)}
+.mstat dd{margin:0;color:var(--fg2)}
+.mstat .v{font-weight:600;color:var(--fg)}
+.dotok{width:7px;height:7px;border-radius:50%;background:var(--good);display:inline-block;
+  margin-right:5px;vertical-align:middle}
+.dotoff{width:7px;height:7px;border-radius:50%;background:var(--fg3);display:inline-block;
+  margin-right:5px;vertical-align:middle}
 .note{font-size:12px;line-height:1.55;color:var(--fg3);margin-top:var(--s2)}
 .note b{color:var(--fg2);font-weight:600}
 
@@ -156,9 +165,12 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px var(--acc
 .judge button.y:hover{background:#2f7d55} .judge button.n:hover{background:#8f3b3b}
 .tag.mine{color:#c4a4ff;border-color:#4a3a70}
 .presets{display:flex;flex-wrap:wrap;gap:var(--s1);margin-bottom:var(--s3)}
-.presets button{background:var(--surface2);border:1px solid var(--line);border-radius:20px;
-  padding:4px 10px;font-size:12px;color:var(--fg2)}
-.presets button:hover{border-color:var(--accent);color:var(--fg)}
+.presets{display:flex;flex-wrap:wrap;gap:var(--s1);margin-bottom:var(--s3)}
+.presets button{background:var(--surface);border:1px solid var(--line2);border-radius:20px;
+  padding:6px 12px;font-size:12px;color:var(--fg2);font-weight:550}
+.presets button:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.presets button.reset{margin-left:auto;color:var(--fg3)}
+.presets button.reset:hover{color:var(--bad);border-color:var(--bad);background:transparent}
 
 /* ---------- results ---------- */
 .banner{display:flex;gap:var(--s3);background:var(--surface);border:1px solid var(--line);
@@ -460,119 +472,149 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
 
   <!-- ============ SEARCH ============ -->
   <div id="pSearch">
+    <!-- Active selections live at the top of the panel, per the pattern research: users
+         should see what is applied without hunting through collapsed groups for it. -->
+    <div class="applied" id="applied"></div>
+
     <div class="presets">
       <button data-pre="balanced">Balanced</button>
       <button data-pre="looks">Looks first</button>
       <button data-pre="age">Age first</button>
       <button data-pre="quality">Best photos</button>
-      <button data-pre="reset">Clear</button>
+      <button class="reset" data-pre="reset">Reset all</button>
     </div>
 
-    <div class="sect">
-      <h3>Criteria mix <span class="w" id="mixTot">100%</span></h3>
-      <div class="mix" id="mix"></div>
-      <div class="mixkey">
-        <span><i style="background:#5b9dff"></i>Looks</span>
-        <span><i style="background:#3ddc97"></i>Age</span>
-        <span><i style="background:#f5b544"></i>Gender</span>
+    <details class="sect" open>
+      <summary>Attractiveness <span class="w" id="wA">50%</span></summary>
+      <div class="body">
+        <div class="f"><label for="attrPct">Top percentile</label>
+          <span class="num" id="attrPctV">30%</span></div>
+        <input type="range" id="attrPct" min="0" max="0.98" step="0.02" value="0.7" class="wide">
+        <div class="f"><label for="attrW">Importance</label>
+          <span class="num" id="attrWV">0.50</span></div>
+        <input type="range" id="attrW" min="0" max="1" step="0.05" value="0.5" class="wide">
+        <p class="note">A <b>percentile of your library</b>, not an absolute score — absolute
+          thresholds don't transfer between image collections.</p>
       </div>
-      <p class="note" id="mixNote"></p>
-    </div>
+    </details>
 
-    <div class="sect" id="tasteSect">
-      <h3>Your taste <span class="w" id="tastePct">off</span></h3>
-      <div class="f"><label>Personalise ranking</label>
-        <span class="sw"><input type="checkbox" id="pOn"><i></i></span></div>
-      <div class="f"><label>Lean on my taste</label>
-        <input type="range" id="pStr" min="0.25" max="3" step="0.25" value="1">
-        <span class="num" id="pStrV">1.0×</span></div>
-      <div class="tastebar"><i id="tasteFill"></i></div>
-      <p class="note" id="tasteNote">Not taught yet.</p>
-      <div class="f" style="margin-top:10px">
-        <input type="text" id="refPath" placeholder="/path/to/faces-you-like"></div>
-      <div class="f"><button class="btn" id="addRef" style="flex:1">+ Add as “I like this”</button></div>
-      <div class="f"><button class="btn" id="addRefBad" style="flex:1">+ Add as “not my type”</button>
-        <button class="btn" id="resetPref" title="Forget everything learned">↺</button></div>
-      <p class="note">Point at a single image or a whole folder. Faces are detected and
-        encoded the same way as your library, so they are directly comparable.</p>
-      <div id="refList"></div>
-    </div>
+    <details class="sect" open>
+      <summary>Your taste <span class="w" id="tastePct">off</span></summary>
+      <div class="body">
+        <div class="f"><label for="pOn">Personalise ranking</label>
+          <label class="sw" for="pOn"><input type="checkbox" id="pOn"><i></i></label></div>
+        <div class="tastebar"><i id="tasteFill"></i></div>
+        <p class="note" id="tasteNote">Not taught yet.</p>
+        <div class="f"><label for="pStr">Lean on my taste</label>
+          <span class="num" id="pStrV">1.0×</span></div>
+        <input type="range" id="pStr" min="0.25" max="3" step="0.25" value="1" class="wide">
+        <div class="hr"></div>
+        <label class="lbl" for="refPath">Teach it from examples</label>
+        <input type="text" id="refPath" placeholder="/path/to/faces-you-like" class="wide">
+        <div class="btnrow">
+          <button class="btn sm" id="addRef">♥ I like these</button>
+          <button class="btn sm" id="addRefBad">✕ Not my type</button>
+        </div>
+        <div class="btnrow"><button class="btn sm ghost" id="resetPref">↺ Forget what it learned</button></div>
+        <p class="note">A single image or a whole folder. Faces are detected and encoded the
+          same way as your library, so they are directly comparable.</p>
+        <div id="refList"></div>
+      </div>
+    </details>
 
-    <div class="sect">
-      <h3>Attractiveness <span class="w" id="wA">50%</span></h3>
-      <div class="f"><label>Top percentile</label>
-        <input type="range" id="attrPct" min="0" max="0.98" step="0.02" value="0.7">
-        <span class="num" id="attrPctV">30%</span></div>
-      <div class="f"><label>Importance</label>
-        <input type="range" id="attrW" min="0" max="1" step="0.05" value="0.5">
-        <span class="num" id="attrWV">0.50</span></div>
-      <p class="note">A <b>percentile of your library</b>, not an absolute score — absolute
-        thresholds don't transfer between image collections.</p>
-    </div>
+    <details class="sect">
+      <summary>Age <span class="w" id="wG">30%</span></summary>
+      <div class="body">
+        <div class="f"><label>Between</label>
+          <input type="number" id="ageMin" value="20" min="0" max="100">
+          <span class="sep">–</span>
+          <input type="number" id="ageMax" value="35" min="0" max="100"></div>
+        <div class="f"><label for="ageW">Importance</label>
+          <span class="num" id="ageWV">0.30</span></div>
+        <input type="range" id="ageW" min="0" max="1" step="0.05" value="0.3" class="wide">
+        <div class="f"><label for="ageReq">Must have an age estimate</label>
+          <label class="sw" for="ageReq"><input type="checkbox" id="ageReq"><i></i></label></div>
+        <p class="note">Age comes from a slower pass, so some faces have none yet. They still
+          appear — the criterion just contributes nothing.</p>
+      </div>
+    </details>
 
-    <div class="sect">
-      <h3>Age <span class="w" id="wG">30%</span></h3>
-      <div class="f"><label>Between</label>
-        <input type="number" id="ageMin" value="20" min="0" max="100">
-        <input type="number" id="ageMax" value="35" min="0" max="100"></div>
-      <div class="f"><label>Importance</label>
-        <input type="range" id="ageW" min="0" max="1" step="0.05" value="0.3">
-        <span class="num" id="ageWV">0.30</span></div>
-      <div class="f"><label>Must have an age estimate</label>
-        <span class="sw"><input type="checkbox" id="ageReq"><i></i></span></div>
-    </div>
+    <details class="sect">
+      <summary>Gender <span class="w" id="wS">20%</span></summary>
+      <div class="body">
+        <div class="f"><label for="gender">Presenting as</label>
+          <select id="gender"><option value="">Any</option>
+            <option value="female">Female</option><option value="male">Male</option></select></div>
+        <div class="f"><label for="genW">Importance</label>
+          <span class="num" id="genWV">0.20</span></div>
+        <input type="range" id="genW" min="0" max="1" step="0.05" value="0.2" class="wide">
+        <div class="f"><label for="genStrict">Exclude non-matching</label>
+          <label class="sw" for="genStrict"><input type="checkbox" id="genStrict"><i></i></label></div>
+        <p class="note">Soft by default. A hard filter on an imperfect classifier drops real
+          matches unevenly — strict mode reports how many it removed.</p>
+      </div>
+    </details>
 
-    <div class="sect">
-      <h3>Gender <span class="w" id="wS">20%</span></h3>
-      <div class="f"><label>Presenting as</label>
-        <select id="gender"><option value="">Any</option>
-          <option value="female">Female</option><option value="male">Male</option></select></div>
-      <div class="f"><label>Importance</label>
-        <input type="range" id="genW" min="0" max="1" step="0.05" value="0.2">
-        <span class="num" id="genWV">0.20</span></div>
-      <div class="f"><label>Exclude non-matching</label>
-        <span class="sw"><input type="checkbox" id="genStrict"><i></i></span></div>
-      <p class="note">Soft by default. A hard filter on an imperfect classifier drops real
-        matches unevenly — strict mode tells you how many it removed.</p>
-    </div>
+    <details class="sect">
+      <summary>Quality &amp; filters</summary>
+      <div class="body">
+        <div class="f"><label for="minQ">Minimum face quality</label>
+          <span class="num" id="minQV">0.20</span></div>
+        <input type="range" id="minQ" min="0" max="1" step="0.05" value="0.2" class="wide">
+        <div class="f"><label>Minimum face size</label>
+          <input type="number" id="minPx" value="0" min="0" max="2000"><span class="unit">px</span></div>
+        <div class="f"><label for="noOod">Hide unreliable estimates</label>
+          <label class="sw" for="noOod"><input type="checkbox" id="noOod"><i></i></label></div>
+        <div class="f"><label for="dedup">Collapse duplicates</label>
+          <label class="sw" for="dedup"><input type="checkbox" id="dedup" checked><i></i></label></div>
+        <div class="f"><label for="favOnly">Favourites only</label>
+          <label class="sw" for="favOnly"><input type="checkbox" id="favOnly"><i></i></label></div>
+        <label class="lbl" for="pathq">Path contains</label>
+        <input type="text" id="pathq" placeholder="any" class="wide">
+      </div>
+    </details>
 
-    <div class="sect">
-      <h3>Filters</h3>
-      <div class="f"><label>Min face quality</label>
-        <input type="range" id="minQ" min="0" max="1" step="0.05" value="0.2">
-        <span class="num" id="minQV">0.20</span></div>
-      <div class="f"><label>Min face size</label>
-        <input type="number" id="minPx" value="0" min="0" max="2000"><span class="num">px</span></div>
-      <div class="f"><label>Hide unreliable estimates</label>
-        <span class="sw"><input type="checkbox" id="noOod"><i></i></span></div>
-      <div class="f"><label>Collapse duplicates</label>
-        <span class="sw"><input type="checkbox" id="dedup" checked><i></i></span></div>
-      <div class="f"><label>Favourites only</label>
-        <span class="sw"><input type="checkbox" id="favOnly"><i></i></span></div>
-      <div class="f"><label>Path contains</label><input type="text" id="pathq" placeholder="any"></div>
-    </div>
+    <details class="sect">
+      <summary>Criteria mix <span class="w" id="mixTot">100%</span></summary>
+      <div class="body">
+        <div class="mix" id="mix"></div>
+        <div class="mixkey">
+          <span><i style="background:#2f6bdb"></i>Looks</span>
+          <span><i style="background:#1b8a5a"></i>Age</span>
+          <span><i style="background:#a86a08"></i>Gender</span>
+        </div>
+        <p class="note" id="mixNote"></p>
+      </div>
+    </details>
 
-    <div class="sect">
-      <h3>Account</h3>
-      <div class="who" id="who">Open mode — no account</div>
-      <div class="f" style="margin-top:8px"><label>Undo window</label>
-        <input type="range" id="undoSec" min="0" max="60" step="1" value="10">
-        <span class="num" id="undoSecV">10s</span></div>
-      <p class="note">A like or reject hides the face straight away, but only starts shaping
-        your model after this delay — so an undo inside the window leaves no trace.
-        Set to 0 to apply immediately.</p>
-      <div class="f"><button class="btn" id="logout" style="flex:1">Sign out</button></div>
-    </div>
+    <details class="sect">
+      <summary>Saved searches</summary>
+      <div class="body">
+        <select id="saved" class="wide"><option value="">— none selected —</option></select>
+        <div class="btnrow"><button class="btn sm" id="save">Save current</button>
+          <button class="btn sm ghost" id="delSaved">Delete</button></div>
+      </div>
+    </details>
 
-    <div class="sect">
-      <h3>Saved searches</h3>
-      <div class="f"><select id="saved"><option value="">— none selected —</option></select></div>
-      <div class="f"><button class="btn" id="save" style="flex:1">Save current</button>
-        <button class="btn" id="delSaved">Delete</button></div>
-    </div>
+    <details class="sect" id="modelSect">
+      <summary>Model status <span class="w" id="modelDot">·</span></summary>
+      <div class="body" id="modelBody">Loading…</div>
+    </details>
+
+    <details class="sect">
+      <summary>Account</summary>
+      <div class="body">
+        <div class="who" id="who">Open mode — no account</div>
+        <div class="f" style="margin-top:10px"><label for="undoSec">Undo window</label>
+          <span class="num" id="undoSecV">10s</span></div>
+        <input type="range" id="undoSec" min="0" max="60" step="1" value="10" class="wide">
+        <p class="note">A like or reject hides the face straight away, but only starts shaping
+          your model after this delay — so an undo inside the window leaves no trace.</p>
+        <div class="btnrow"><button class="btn sm ghost" id="logout">Sign out</button></div>
+      </div>
+    </details>
   </div>
 
-  <!-- ============ LIBRARY ============ -->
   <div id="pAdmin" hidden>
     <div class="sect">
       <h3>Users</h3>
@@ -603,9 +645,9 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
       <div class="f"><input type="text" id="root" placeholder="/home/you/Photos"></div>
       <div class="f"><label>Limit (0 = all)</label><input type="number" id="ilimit" value="0" min="0"></div>
       <div class="f"><label>Estimate age &amp; gender</label>
-        <span class="sw"><input type="checkbox" id="iage" checked><i></i></span></div>
+        <label class="sw" for="iage"><input type="checkbox" id="iage" checked><i></i></label></div>
       <div class="f"><label>Re-process everything</label>
-        <span class="sw"><input type="checkbox" id="iforce"><i></i></span></div>
+        <label class="sw" for="iforce"><input type="checkbox" id="iforce"><i></i></label></div>
       <button class="btn primary" id="go" style="width:100%">Scan &amp; analyse</button>
       <p class="note">Safe to re-run — unchanged files are skipped before anything is decoded.
         Age &amp; gender is the slow stage; turn it off for a quick first pass.</p>
@@ -694,6 +736,7 @@ function syncMix(){
   // the user cannot see why. Say it outright.
   const top=Object.entries({Looks:w.a,Age:w.g,Gender:w.s}).sort((x,y)=>y[1]-x[1])[0];
   const weak=Object.entries({looks:w.a,age:w.g,gender:w.s}).filter(([k,v])=>v>0&&v/t<0.2).map(([k])=>k);
+  appliedChips();
   $('#mixNote').innerHTML = t===0 ? 'All importances are zero — every result scores the same.'
     : `<b>${top[0]}</b> dominates the ranking.` + (weak.length
       ? ` A strong ${weak.join(' / ')} mismatch can still rank highly — raise its importance,
@@ -816,6 +859,57 @@ async function fav(id,el){
   toast(on?'Removed from favourites':'Added to favourites');
 }
 
+/* ---------- applied filters ---------- */
+function appliedChips(){
+  const c=[], w=weights();
+  const pct=+$('#attrPct').value;
+  if(pct>0) c.push([`Top ${Math.round((1-pct)*100)}%`, ()=>{$('#attrPct').value=0;}]);
+  if($('#gender').value) c.push([$('#gender').value, ()=>{$('#gender').value='';}]);
+  const a0=+$('#ageMin').value, a1=+$('#ageMax').value;
+  if(a0>0||a1<99) c.push([`${a0}–${a1} yrs`, ()=>{$('#ageMin').value=0;$('#ageMax').value=99;}]);
+  if(+$('#minQ').value>0) c.push([`quality ≥ ${(+$('#minQ').value).toFixed(2)}`, ()=>{$('#minQ').value=0;}]);
+  if(+$('#minPx').value>0) c.push([`≥ ${$('#minPx').value}px`, ()=>{$('#minPx').value=0;}]);
+  if($('#genStrict').checked) c.push(['strict gender', ()=>{$('#genStrict').checked=false;}]);
+  if($('#noOod').checked) c.push(['hide unreliable', ()=>{$('#noOod').checked=false;}]);
+  if($('#favOnly').checked) c.push(['favourites only', ()=>{$('#favOnly').checked=false;}]);
+  if($('#pOn').checked) c.push([`your taste ${$('#tastePct').textContent}`, ()=>{$('#pOn').checked=false;}]);
+  if($('#pathq').value.trim()) c.push([`path “${$('#pathq').value.trim()}”`, ()=>{$('#pathq').value='';}]);
+  const el=$('#applied');
+  el.innerHTML=c.map(([t],i)=>`<span>${t}<button data-x="${i}" title="Remove">×</button></span>`).join('');
+  $$('#applied [data-x]').forEach(b=>b.onclick=()=>{ c[+b.dataset.x][1](); syncMix(); run(); });
+}
+
+/* ---------- model status ---------- */
+async function modelStatus(){
+  let d; try{ d=await api('/api/models'); }catch(e){
+    $('#modelBody').innerHTML=`<span style="color:var(--bad)">${e.message.slice(0,120)}</span>`; return; }
+  const m=d.attractiveness.head&&d.attractiveness.head.metrics||{};
+  const you=d.your_model||{};
+  $('#modelDot').textContent = you.trained ? `${Math.round((you.alpha||0)*100)}% you` : 'stock';
+  $('#modelBody').innerHTML=`
+    <dl class="mstat">
+      <dt>Detector</dt><dd><span class="dotok"></span><span class="v">${d.detector.name}</span>
+        <br>det_size ${d.detector.det_size} · pad ${d.detector.pad}</dd>
+      <dt>Encoder</dt><dd><span class="dotok"></span><span class="v">${d.encoder.name}</span>
+        <br>${d.encoder.crop||'—'}</dd>
+      <dt>Attractiveness</dt><dd>${d.attractiveness.head
+        ? `<span class="dotok"></span><span class="v">LDL ensemble ×${m.n_members||'?'}</span>
+           <br>val PC ${m.val_pearson?.toFixed(3)??'—'} · MAE ${m.val_mae?.toFixed(3)??'—'}
+           <br>90% coverage ${m.val_coverage_90?.toFixed(2)??'—'}`
+        : '<span class="dotoff"></span>not trained'}</dd>
+      <dt>Age / gender</dt><dd><span class="${d.faces_indexed?'dotok':'dotoff'}"></span>
+        <span class="v">${d.age_gender.name}</span><br>${d.age_gender.policy}</dd>
+      <dt>Quality</dt><dd><span class="dotok"></span><span class="v">${d.quality.name}</span></dd>
+      <dt>Your model</dt><dd>${you.trained
+        ? `<span class="dotok"></span><span class="v">${you.method}</span>
+           <br>${you.likes}♥ ${you.dislikes}✕ ${you.references}★ · weight ${Math.round(you.alpha*100)}%`
+        : '<span class="dotoff"></span>not taught yet'}</dd>
+      <dt>Indexed</dt><dd class="v">${d.faces_indexed.toLocaleString()} faces</dd>
+    </dl>
+    <p class="note">Trained on ${d.attractiveness.trained_on}. Every figure here is an
+      estimate, not a measurement.</p>`;
+}
+
 /* ---------- accounts ---------- */
 let MODE='login';
 function showGate(msg){ $('#gate').hidden=false; if(msg) $('#gErr').textContent=msg; }
@@ -936,7 +1030,7 @@ async function judge(id,kind){
   render(LASTDIAG);
   // Refresh the taste readout straight away so the sidebar stops saying OFF while it is
   // plainly learning, and so the strength bar moves as you rate.
-  await taste();
+  await taste(); modelStatus();
   if(secs>0) offerUndo(id,kind,secs);
   else { toast(kind==='like'?'Noted — more like this':'Hidden — fewer like this'); run(); }
 }
@@ -976,7 +1070,7 @@ $('#addRefBad').onclick=()=>addRefs('dislike');
 $('#resetPref').onclick=async()=>{ if(!confirm('Forget everything Facet has learned about your taste?')) return;
   await api('/api/preference/reset',{method:'POST'}); $('#pOn').checked=false;
   await taste(); run(); toast('Preferences cleared'); };
-$('#pOn').onchange=()=>{taste();run();};
+$('#pOn').onchange=()=>{taste();modelStatus();syncMix();run();};
 $('#pStr').oninput=()=>{$('#pStrV').textContent=(+$('#pStr').value).toFixed(2).replace(/0$/,'')+'×';taste();};
 $('#pStr').onchange=()=>run();
 $('#undoSec').oninput=()=>{const v=undoSecs();
@@ -1260,7 +1354,7 @@ async function boot(){
     tab('admin');
     toast('An administrator reset your password — please set a new one');
   }
-  await stats(); await loadSaved(); await taste();
+  await stats(); await loadSaved(); await taste(); modelStatus();
   STATS.ready ? run() : onboarding();
 }
 

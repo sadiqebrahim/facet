@@ -435,6 +435,63 @@ def create_app(index_path: str, features_dir: str) -> FastAPI:
             "FROM runs ORDER BY id DESC LIMIT 5")]
         return s
 
+    @app.get("/api/models")
+    def models(user: str = Depends(current_user)):
+        """What is actually loaded, and what each piece was decided by.
+
+        A ranking that cannot say which models produced it is not auditable, and every
+        number here is an estimate whose provenance matters (RESEARCH.md 11.4).
+        """
+        from ..models.beauty_head import BeautyHead
+        from ..pipeline.indexer import IndexConfig
+
+        cfg = IndexConfig()
+        ix = db()
+        row = ix.conn.execute(
+            "SELECT encoder_version, crop_version, detector_version, COUNT(*) n FROM faces f "
+            "JOIN images i ON i.id=f.image_id GROUP BY 1,2,3 ORDER BY n DESC LIMIT 1").fetchone()
+        head_path = Path(__file__).resolve().parents[3] / "artifacts/models/beauty_head.npz"
+        head = None
+        if head_path.exists():
+            try:
+                h = BeautyHead.load(head_path)
+                head = {"version": h.version, "metrics": h.metrics,
+                        "members": h.metrics.get("n_members"),
+                        "source": h.__class__.__name__}
+            except Exception as e:  # noqa: BLE001
+                head = {"error": str(e)}
+        pm = engine().preference_model(user)
+        return {
+            "detector": {"name": "SCRFD (buffalo_l)",
+                         "version": row["detector_version"] if row else None,
+                         "det_size": cfg.det_size, "pad": cfg.pad_frac,
+                         "decided_by": "E8 — both axes adaptive; the best scene config has "
+                                       "zero recall on cropped portraits"},
+            "encoder": {"name": "ArcFace R50 + CLIP ViT-B/32",
+                        "version": row["encoder_version"] if row else None,
+                        "crop": row["crop_version"] if row else cfg.crop_version,
+                        "decided_by": "exp001/E5 — frozen features beat fine-tuned CNNs; "
+                                      "crop margin 0.25 chosen on transfer, not in-benchmark"},
+            "attractiveness": {"name": "LDL ensemble + split-conformal", "head": head,
+                               "trained_on": "SCUT-FBP5500 (60 raters, aged 18-27, 2017)",
+                               "decided_by": "E6 — objectives tie on accuracy; LDL wins on "
+                                             "what it reports"},
+            "age_gender": {"name": "MiVOLO v2 (Apache-2.0)", "policy": "lazy, quality-gated",
+                           "decided_by": "E4 — ~3x fairer than the retired baseline, "
+                                         "~190x slower"},
+            "quality": {"name": "composite_v2",
+                        "decided_by": "E9 — validated by Error-vs-Reject on LFW"},
+            "your_model": ({"trained": True, "method": pm.status().method,
+                            "alpha": pm.status().alpha, "likes": pm.status().n_likes,
+                            "dislikes": pm.status().n_dislikes,
+                            "references": pm.status().n_references,
+                            "note": pm.status().note}
+                           if pm else {"trained": False,
+                                       "note": "Not taught yet — rate results or add "
+                                               "reference faces."}),
+            "faces_indexed": row["n"] if row else 0,
+        }
+
     # ---------------------------------------------------------------- search
 
     @app.post("/api/search")

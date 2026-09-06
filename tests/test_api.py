@@ -404,3 +404,23 @@ def test_media_accepts_the_token_as_a_query_parameter(client):
                     json={"username": "boss", "password": "secret123"}).json()
     assert client.get(f"/api/crop/1?t={r['token']}").status_code in (200, 410)
     assert client.get("/api/crop/1?t=not-a-real-token").status_code == 401
+
+
+def test_model_status_reports_the_whole_stack(client):
+    """A ranking that cannot say which models produced it is not auditable."""
+    r = client.post("/api/auth/register",
+                    json={"username": "boss", "password": "secret123"}).json()
+    d = client.get("/api/models", headers={"Authorization": f"Bearer {r['token']}"}).json()
+    for key in ("detector", "encoder", "attractiveness", "age_gender", "quality",
+                "your_model", "faces_indexed"):
+        assert key in d, f"model status missing {key}"
+    # every component says which experiment chose it
+    for key in ("detector", "encoder", "attractiveness", "age_gender", "quality"):
+        assert d[key].get("decided_by"), f"{key} does not record why it was chosen"
+    assert d["attractiveness"]["trained_on"].startswith("SCUT-FBP5500")
+    assert d["your_model"]["trained"] is False
+
+
+def test_model_status_requires_a_session(client):
+    client.post("/api/auth/register", json={"username": "boss", "password": "secret123"})
+    assert client.get("/api/models").status_code == 401

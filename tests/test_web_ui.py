@@ -211,3 +211,38 @@ def test_both_themes_meet_contrast_minimums(page):
         surf = re.search(r"--surface:\s*(#[0-9a-fA-F]{6})", block).group(1)
         r = ratio(fg3, surf)
         assert r >= 4.5, f"{name} muted text {fg3} on {surf} is {r:.2f}:1"
+
+
+def test_toggle_switches_are_clickable(page):
+    """The skin <i> is position:absolute;inset:0 and follows the input in DOM order, so it
+    painted over the invisible checkbox and swallowed every click. None of the toggles
+    worked. Two things fix it: the wrapper must be a <label> (so the whole control is a hit
+    target) and the skin must not receive pointer events."""
+    assert '<span class="sw">' not in page, "switch wrapper must be a <label>, not a <span>"
+    assert page.count('<label class="sw"') >= 6
+    css = _style(page)
+    sw = re.search(r"\.sw i\{([^}]*)\}", css)
+    assert sw and "pointer-events:none" in sw.group(1), \
+        "the switch skin must let clicks reach the checkbox"
+
+
+def test_every_switch_label_points_at_its_input(page):
+    for m in re.finditer(r'<label class="sw" for="([A-Za-z0-9_]+)">\s*<input type="checkbox" id="([A-Za-z0-9_]+)"', page):
+        assert m.group(1) == m.group(2), f"label for={m.group(1)} does not match input id={m.group(2)}"
+
+
+def test_sidebar_groups_are_collapsible(page):
+    """One long undifferentiated column is what made the panel feel crowded."""
+    assert page.count('<details class="sect"') >= 6
+    assert "<summary>" in page
+
+
+def test_applied_filters_are_surfaced(page):
+    """Selections must be visible without opening every collapsed group."""
+    assert 'id="applied"' in page and "function appliedChips(" in _script(page)
+
+
+def test_model_status_panel_exists(page):
+    js = _script(page)
+    assert 'id="modelSect"' in page
+    assert "async function modelStatus(" in js and "/api/models" in js
