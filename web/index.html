@@ -1,59 +1,79 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="dark light">
-<meta name="theme-color" content="#0d0f13">
+<meta name="theme-color" content="#f4f6f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141821" media="(prefers-color-scheme: dark)">
 <title>Facet</title>
 <style>
 /* 8pt spacing scale, dark greys rather than pure black, medium weights ------------ */
+/* ── Palette ────────────────────────────────────────────────────────────────
+   Light is the default now. Two rounds of "too dark / unreadable" is enough
+   signal; a photo-browsing tool also reads better on a light ground, because the
+   surface stops competing with the images. Both themes are checked against
+   WCAG AA for their muted text, which is where the earlier version failed. */
 :root{
   --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
-  --bg:#101319; --surface:#171b23; --surface2:#1e232d; --raised:#262c38;
-  --line:#2c3340; --line2:#3b4453;
-  /* fg3 was #6f7885 - 4.07:1 on the panel, under the 4.5:1 AA floor, and it is used for
-     the small explanatory notes where legibility matters most. */
-  --fg:#eef1f6; --fg2:#c8d0dc; --fg3:#98a2b3;
-  --accent:#5b9dff; --accent-dim:#2d4f80;
-  --good:#3ddc97; --warn:#f5b544; --bad:#ff6b6b;
-  --r1:6px; --r2:10px; --r3:14px;
-  --sidebar:288px;
-  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.28);
+
+  --bg:#f4f6f9; --surface:#ffffff; --surface2:#eef1f5; --raised:#ffffff;
+  --line:#e0e5ec; --line2:#c6cedb;
+  --fg:#101725; --fg2:#48566b; --fg3:#66738a;
+  --accent:#2f6bdb; --accent-dim:#dbe6fb; --on-accent:#ffffff;
+  --good:#1b8a5a; --warn:#a86a08; --bad:#c9372c;
+
+  --r1:8px; --r2:12px; --r3:18px;
+  --sidebar:300px;
+  --shadow:0 1px 2px rgba(16,23,37,.05), 0 6px 20px rgba(16,23,37,.07);
+  --shadow-lg:0 2px 6px rgba(16,23,37,.07), 0 18px 46px rgba(16,23,37,.13);
 }
-[data-theme=light]{
-  --bg:#f7f8fa; --surface:#fff; --surface2:#f2f4f7; --raised:#fff;
-  --line:#e3e7ed; --line2:#cfd6e0;
-  --fg:#141821; --fg2:#4d5563; --fg3:#818b99;
-  --accent:#2563eb; --accent-dim:#bfd4fb;
-  --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.08);
+/* Deliberately NOT following prefers-color-scheme: light is the default because the
+   dark build was reported as too dark twice. The toggle overrides and is remembered. */
+@media (prefers-color-scheme: dark){:root[data-theme=dark]{
+  --bg:#141821; --surface:#1c212b; --surface2:#232935; --raised:#2b3240;
+  --line:#313949; --line2:#445063;
+  --fg:#f2f5fa; --fg2:#c6cfdd; --fg3:#9aa5b8;
+  --accent:#6ea5ff; --accent-dim:#24365a; --on-accent:#07142b;
+  --good:#43d69a; --warn:#f0b23f; --bad:#ff7a72;
+  --shadow:0 1px 2px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.3);
+  --shadow-lg:0 2px 8px rgba(0,0,0,.4), 0 22px 54px rgba(0,0,0,.45);
+}}
+[data-theme=dark]{
+  --bg:#141821; --surface:#1c212b; --surface2:#232935; --raised:#2b3240;
+  --line:#313949; --line2:#44506310;
+  --line2:#445063;
+  --fg:#f2f5fa; --fg2:#c6cfdd; --fg3:#9aa5b8;
+  --accent:#6ea5ff; --accent-dim:#24365a; --on-accent:#07142b;
+  --good:#43d69a; --warn:#f0b23f; --bad:#ff7a72;
+  --shadow:0 1px 2px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.3);
+  --shadow-lg:0 2px 8px rgba(0,0,0,.4), 0 22px 54px rgba(0,0,0,.45);
 }
-/* An author `display:` rule outranks the user-agent's [hidden]{display:none}, so any
-   element the script hides with .hidden would stay visible. That is what kept the sign-in
-   panel on screen after a successful login. Make [hidden] authoritative. */
 [hidden]{display:none !important}
 *{box-sizing:border-box;min-width:0}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);
-  font:500 14px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Roboto,sans-serif;
-  -webkit-font-smoothing:antialiased}
+  font:450 14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r1)}
 
 /* ---------- chrome ---------- */
-.top{display:flex;align-items:center;gap:var(--s4);height:56px;padding:0 var(--s4);
+.top{display:flex;align-items:center;gap:var(--s4);height:60px;padding:0 var(--s5);
   background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
 .brand{display:flex;align-items:center;gap:var(--s2);font-weight:650;font-size:15px}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
 .stats{display:flex;gap:var(--s4);color:var(--fg2);font-size:12.5px;font-variant-numeric:tabular-nums}
 .stats b{color:var(--fg);font-weight:600}
 .grow{flex:1}
-.btn{background:var(--surface2);border:1px solid var(--line);border-radius:var(--r1);
-  padding:7px 12px;font-size:13px;font-weight:550;transition:background .12s,border-color .12s}
-.btn:hover{background:var(--raised);border-color:var(--line2)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#08111f;font-weight:650}
+.btn{background:var(--surface);border:1px solid var(--line2);border-radius:var(--r1);
+  padding:8px 14px;font-size:13px;font-weight:550;color:var(--fg);
+  transition:background .13s,border-color .13s,box-shadow .13s}
+.btn:hover{background:var(--surface2);border-color:var(--fg3);box-shadow:var(--shadow)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);
+  font-weight:600;box-shadow:var(--shadow)}
 .btn.primary:hover{filter:brightness(1.08)}
 .btn.icon{padding:7px 9px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
@@ -69,16 +89,19 @@ main{padding:var(--s5) var(--s5) 64px;max-width:1800px}
 
 /* ---------- sidebar ---------- */
 .seg{display:flex;background:var(--surface2);border:1px solid var(--line);
-  border-radius:var(--r2);padding:3px;margin-bottom:var(--s4)}
-.seg button{flex:1;background:none;border:0;padding:6px;border-radius:7px;
-  font-size:12.5px;font-weight:600;color:var(--fg2)}
-.seg button[aria-selected=true]{background:var(--raised);color:var(--fg);box-shadow:var(--shadow)}
+  border-radius:var(--r2);padding:4px;margin-bottom:var(--s5);gap:2px}
+.seg button{flex:1;background:none;border:0;padding:8px 6px;border-radius:8px;
+  font-size:13px;font-weight:600;color:var(--fg3);transition:.13s}
+.seg button:hover{color:var(--fg)}
+.seg button[aria-selected=true]{background:var(--surface);color:var(--accent);
+  box-shadow:var(--shadow)}
 .sect{border-top:1px solid var(--line);padding:var(--s4) 0}
 .sect:first-of-type{border-top:0;padding-top:0}
-.sect > h3{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--fg3);
-  margin-bottom:var(--s3);display:flex;align-items:center;gap:var(--s2)}
+.sect > h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--fg2);
+  font-weight:700;margin-bottom:var(--s3);display:flex;align-items:center;gap:var(--s2)}
 .sect > h3 .w{margin-left:auto;color:var(--accent);font-variant-numeric:tabular-nums;
-  font-size:11px;background:var(--accent-dim);padding:1px 6px;border-radius:20px}
+  font-size:11px;background:var(--accent-dim);padding:2px 8px;border-radius:20px;
+  letter-spacing:0;font-weight:650}
 .f{display:flex;align-items:center;gap:var(--s2);margin:var(--s2) 0}
 .f > label{flex:1;font-size:13px;color:var(--fg2);font-weight:500}
 .f input[type=number]{width:60px;background:var(--surface2);border:1px solid var(--line);
@@ -139,12 +162,13 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px var(--acc
 
 /* ---------- results ---------- */
 .banner{display:flex;gap:var(--s3);background:var(--surface);border:1px solid var(--line);
-  border-left:3px solid var(--warn);border-radius:var(--r2);padding:var(--s3) var(--s4);
-  margin-bottom:var(--s4);font-size:12.5px;color:var(--fg2);line-height:1.55}
+  border-left:4px solid var(--warn);border-radius:var(--r2);padding:var(--s4);
+  margin-bottom:var(--s5);font-size:13px;color:var(--fg2);line-height:1.6;
+  box-shadow:var(--shadow)}
 .banner b{color:var(--fg)}
 .banner button{margin-left:auto;background:none;border:0;color:var(--fg3);font-size:18px;line-height:1;align-self:start}
 .toolbar{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s4);flex-wrap:wrap}
-.count{font-size:20px;font-weight:650;font-variant-numeric:tabular-nums}
+.count{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .pill{font-size:11.5px;color:var(--fg2);background:var(--surface2);border:1px solid var(--line);
   border-radius:20px;padding:3px 10px}
 .pill.warn{color:var(--warn);border-color:#4a3a12;background:#2a2010}
@@ -152,15 +176,15 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px var(--acc
 .grid{display:grid;gap:var(--s3);
   grid-template-columns:repeat(auto-fill,minmax(var(--card,210px),1fr))}
 .card{position:relative;background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r2);overflow:hidden;cursor:pointer;
-  transition:transform .13s ease,box-shadow .13s ease,border-color .13s}
-.card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--line2)}
+  border-radius:var(--r2);overflow:hidden;cursor:pointer;box-shadow:var(--shadow);
+  transition:transform .15s cubic-bezier(.2,.8,.3,1),box-shadow .15s,border-color .13s}
+.card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:var(--line2)}
 .card .ph{aspect-ratio:1;background:var(--surface2);position:relative;overflow:hidden}
 .card .ph img{width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .25s}
 .card .ph img.on{opacity:1}
-.rank{position:absolute;top:var(--s2);left:var(--s2);background:rgba(8,10,14,.88);
-  color:#fff;font-size:11.5px;font-weight:650;padding:3px 8px;border-radius:20px;
-  backdrop-filter:blur(6px);font-variant-numeric:tabular-nums}
+.rank{position:absolute;top:var(--s2);left:var(--s2);background:rgba(10,14,22,.9);
+  color:#fff;font-size:11.5px;font-weight:650;padding:4px 9px;border-radius:20px;
+  backdrop-filter:blur(8px);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .star{position:absolute;top:var(--s2);right:var(--s2);width:28px;height:28px;border:0;
   border-radius:50%;background:rgba(8,10,14,.7);color:#fff;font-size:14px;
   backdrop-filter:blur(6px);opacity:0;transition:opacity .13s}
@@ -168,12 +192,12 @@ input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px var(--acc
 .star.on{color:var(--warn)}
 .card .body{padding:var(--s2) var(--s3) var(--s3)}
 .card .l1{display:flex;align-items:baseline;gap:var(--s2);font-variant-numeric:tabular-nums}
-.card .est{font-size:15px;font-weight:650}
+.card .est{font-size:17px;font-weight:650;letter-spacing:-.01em}
 .card .of{font-size:11px;color:var(--fg3)}
 .card .l2{display:flex;gap:var(--s1);flex-wrap:wrap;margin-top:var(--s2)}
 .tag{color:var(--fg2)}
-.tag{font-size:10.5px;font-weight:550;color:var(--fg2);background:var(--surface2);
-  border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+.tag{font-size:11px;font-weight:550;color:var(--fg2);background:var(--surface2);
+  border:1px solid var(--line);border-radius:6px;padding:2px 7px}
 .tag.warn{color:var(--warn);border-color:#4a3a12}
 .tag.dim{color:var(--fg3)}
 .sect > h3{color:var(--fg2)}
@@ -228,11 +252,13 @@ dialog::backdrop{background:rgba(4,6,10,.86);backdrop-filter:blur(3px)}
 
 .gate{position:fixed;inset:0;z-index:200;background:var(--bg);
   display:flex;align-items:center;justify-content:center;padding:var(--s4)}
-.gatebox{width:min(360px,100%);display:flex;flex-direction:column;gap:var(--s3);
+.gatebox{width:min(380px,100%);display:flex;flex-direction:column;gap:var(--s3);
   background:var(--surface);border:1px solid var(--line);border-radius:var(--r3);
-  padding:var(--s5);box-shadow:var(--shadow)}
-.gatebox input{background:var(--surface2);border:1px solid var(--line);
-  border-radius:var(--r1);padding:11px 12px;font-size:15px}
+  padding:var(--s6);box-shadow:var(--shadow-lg)}
+.gatebox input{background:var(--surface);border:1px solid var(--line2);
+  border-radius:var(--r1);padding:12px 14px;font-size:15px}
+.gatebox input:focus{border-color:var(--accent);outline:none;
+  box-shadow:0 0 0 3px var(--accent-dim)}
 .pw{position:relative;display:flex}
 .pw input{flex:1;padding-right:44px}
 .eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;
@@ -718,7 +744,7 @@ function detailPx(){ return innerWidth<=820?Math.round(Math.min(1600,innerWidth*
 function card(x,i){
   const liked=(x.feedback||[]).includes('like');
   const est=x.attractiveness==null?'—':x.attractiveness.toFixed(2);
-  return `<article class="card" data-i="${i}">
+  return `<article class="card${liked?' liked':''}" data-i="${i}">
     <div class="ph"><img loading="lazy" decoding="async" src="${media('/api/crop/'+x.face_id+'?size='+thumbPx())}"
         onload="this.classList.add('on')" alt="Detected face"></div>
     <div class="rank">${Math.round(x.relevance*100)}%</div>
@@ -881,7 +907,10 @@ function offerUndo(faceId, kind, secs){
       const el=t.querySelector('#undoLeft'); if(el) el.textContent=Math.ceil(left);
       if(ring) ring.style.strokeDashoffset=String(56.5*(1-left/total));
     },100),
-    t:setTimeout(()=>{ clearInterval(UNDO.i); t.classList.remove('on'); UNDO=null; run(); }, secs*1000)};
+    t:setTimeout(async ()=>{ clearInterval(UNDO.i); t.classList.remove('on'); UNDO=null;
+      await taste(); await run();
+      // The re-rank used to happen silently, so it looked like nothing had occurred.
+      toast('Ranking updated from your taste'); }, secs*1000)};
   t.querySelector('#undoBtn').onclick=async()=>{
     clearTimeout(UNDO.t); clearInterval(UNDO.i); t.classList.remove('on');
     await api('/api/feedback/undo',{method:'POST',headers:{'content-type':'application/json'},
@@ -895,20 +924,33 @@ async function judge(id,kind){
   const secs=undoSecs();
   const r=await api('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
     body:JSON.stringify({face_id:id,kind,undo_seconds:secs})});
-  if(!$('#pOn').checked) $('#pOn').checked=true;
-  // Remove it from view at once - the point of rejecting is not to see it again - while
-  // the model only learns once the undo window closes.
-  RES=RES.filter(x=>x.face_id!==id); TOTAL=Math.max(0,TOTAL-1); render(LASTDIAG);
+  if(!$('#pOn').checked){ $('#pOn').checked=true; }
+  if(kind==='dislike'){
+    // Only a rejection leaves the grid - the point of rejecting is not to see it again.
+    // Liking previously removed the card too, which read as "the app ate my favourite".
+    RES=RES.filter(x=>x.face_id!==id); TOTAL=Math.max(0,TOTAL-1);
+  }else{
+    const r0=RES.find(x=>x.face_id===id);
+    if(r0) r0.feedback=[...new Set([...(r0.feedback||[]),'like'])];
+  }
+  render(LASTDIAG);
+  // Refresh the taste readout straight away so the sidebar stops saying OFF while it is
+  // plainly learning, and so the strength bar moves as you rate.
+  await taste();
   if(secs>0) offerUndo(id,kind,secs);
-  else { toast(kind==='like'?'More like this':'Fewer like this'); await taste(); run(); }
+  else { toast(kind==='like'?'Noted — more like this':'Hidden — fewer like this'); run(); }
 }
 async function taste(){
   let d; try{ d=await api('/api/preference'); }catch{ return; }
   const on=$('#pOn').checked, a=(d.alpha||0)*(on?+$('#pStr').value:0);
   const eff=Math.min(0.95,a);
-  $('#tastePct').textContent = on? Math.round(eff*100)+'%' : 'off';
+  const n=(d.n_likes||0)+(d.n_dislikes||0);
+  $('#tastePct').textContent = on ? Math.round(eff*100)+'%' : (n?'paused':'off');
+  $('#tastePct').style.background = on&&eff>0 ? '' : 'var(--surface2)';
   $('#tasteFill').style.width=(on?eff*100:0)+'%';
-  $('#tasteNote').textContent = d.note || 'Not taught yet.';
+  $('#tasteNote').innerHTML = (d.note || 'Not taught yet.')
+    + (n && !on ? ' <b style="color:var(--warn)">Personalise ranking is off — switch it on to apply this.</b>' : '')
+    + (n ? `<br><span style="color:var(--fg2)">${d.n_likes||0} liked · ${d.n_dislikes||0} rejected${d.references?.length?` · ${d.references.length} reference`:''}</span>` : '');
   const refs=d.references||[];
   $('#refList').innerHTML = refs.length? `<div class="reflist">${refs.map(r=>
     `<span><b>${r.kind==='like'?'♥':'✕'}</b>${r.path.split('/').pop().slice(0,18)}
@@ -1107,7 +1149,7 @@ $$('[data-pre]').forEach(b=>b.onclick=()=>{
   .forEach(id=>{const el=$('#'+id); el.onchange=()=>{syncMix();run();};});
 $('#dens').onclick=()=>{DENS=DENS===210?150:DENS===150?300:210;render(null);toast('Card size '+DENS+'px');};
 $('#theme').onclick=()=>{const d=document.documentElement;
-  d.dataset.theme=d.dataset.theme==='dark'?'light':'dark';
+  d.dataset.theme = (d.dataset.theme==='dark') ? 'light' : 'dark';
   localStorage.setItem('t',d.dataset.theme);};
 $('#exp').onclick=async()=>{
   const r=await fetch('/api/export?fmt=csv',{method:'POST',
@@ -1223,7 +1265,7 @@ async function boot(){
 }
 
 (async function(){
-  document.documentElement.dataset.theme=localStorage.getItem('t')||'dark';
+  document.documentElement.dataset.theme = localStorage.getItem('t') || 'light';
   const u=localStorage.getItem('facet-undo'); if(u!==null){ $('#undoSec').value=u;
     $('#undoSecV').textContent=+u===0?'off':u+'s'; }
   syncMix();

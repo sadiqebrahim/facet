@@ -163,3 +163,51 @@ def test_muted_text_meets_contrast_minimums(page):
 
 def test_sign_out_is_reachable_from_the_top_bar(page):
     assert 'id="signout"' in page and 'id="userchip"' in page
+
+
+def test_a_like_does_not_remove_the_card(page):
+    """judge() removed the card for BOTH verdicts, so favouriting a face made it vanish -
+    which reads as the app eating your favourite."""
+    js = _script(page)
+    m = re.search(r"async function judge\(id,kind\)\{(.*?)\n\}", js, re.S)
+    assert m, "judge() not found"
+    body = m.group(1)
+    assert "if(kind==='dislike')" in body, "removal must be conditional on rejection"
+    filt = re.search(r"RES=RES\.filter\(x=>x\.face_id!==id\)", body)
+    assert filt and body.index("if(kind==='dislike')") < filt.start()
+
+
+def test_judging_refreshes_the_taste_readout(page):
+    """With the default 10s undo window the sidebar kept reading OFF while the model was
+    plainly learning."""
+    js = _script(page)
+    body = re.search(r"async function judge\(id,kind\)\{(.*?)\n\}", js, re.S).group(1)
+    assert "await taste()" in body
+
+
+def test_the_rerank_is_announced(page):
+    """The post-undo-window re-rank happened silently, so it looked like nothing changed."""
+    assert "Ranking updated from your taste" in _script(page)
+
+
+def test_light_is_the_default_theme(page):
+    assert "localStorage.getItem('t') || 'light'" in _script(page)
+
+
+def test_both_themes_meet_contrast_minimums(page):
+    css = _style(page)
+    def lum(hx):
+        hx = hx.lstrip("#")
+        c = [int(hx[i:i+2], 16) / 255 for i in (0, 2, 4)]
+        c = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    def ratio(a, b):
+        la, lb = lum(a), lum(b)
+        return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+    light = re.search(r":root\{(.*?)\n\}", css, re.S).group(1)
+    dark = re.search(r"\[data-theme=dark\]\{(.*?)\n\}", css, re.S).group(1)
+    for name, block in (("light", light), ("dark", dark)):
+        fg3 = re.search(r"--fg3:\s*(#[0-9a-fA-F]{6})", block).group(1)
+        surf = re.search(r"--surface:\s*(#[0-9a-fA-F]{6})", block).group(1)
+        r = ratio(fg3, surf)
+        assert r >= 4.5, f"{name} muted text {fg3} on {surf} is {r:.2f}:1"
