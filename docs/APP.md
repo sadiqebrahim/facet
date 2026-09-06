@@ -65,6 +65,40 @@ The research phase's conclusions are visible in the UI rather than buried in a d
 - Gender is described as **"presenting as"**, and strict filtering reports how many faces it
   excluded.
 
+## Responsive behaviour
+
+One layout, three tiers, and the important part is not the column count — it is that **every
+hover-only affordance has a touch equivalent**. The favourite star and the ♥/✕ judge buttons
+were originally revealed by `:hover`, which made them unreachable on a phone.
+
+| width | layout |
+|---|---|
+| > 1180 px | persistent 288 px rail + fluid grid |
+| ≤ 1180 px | narrower 250 px rail, denser grid |
+| ≤ 820 px | rail becomes an **off-canvas drawer**: ☰ in the top bar, a floating **⚙ Filters** button, backdrop, Esc to close, and it closes itself after a search so you land on the results |
+| ≤ 420 px | fixed 2-column grid, Export moves into the drawer |
+| landscape phone | detail view returns to two columns so the image pane does not vanish |
+
+Under `@media (hover:none)` every control grows to a ~40 px tap target — range thumbs, toggles,
+buttons — and the card affordances become permanently visible.
+
+Other mobile specifics:
+
+- **Full-screen detail view** on small screens, stacked image-over-panel, with **swipe left/right**
+  to move between results and a sticky action bar above the home indicator.
+- `100dvh` rather than `100vh`, so the collapsing mobile URL bar does not clip the sheet.
+- `viewport-fit=cover` plus `env(safe-area-inset-*)` for notches and home indicators.
+- Zoom is **not** disabled — no `user-scalable=no`.
+- `prefers-reduced-motion` honoured.
+- Re-layout is debounced on resize, and the detail view re-fits on orientation change.
+
+**Device-aware image sizing**, with a caveat worth stating because it is counter-intuitive: a
+retina phone showing 2 columns needs *more* pixels per card than a 1× laptop showing 7, so
+sizing to the device does not by itself reduce mobile bandwidth. Grid thumbnails cap DPR at
+1.5 (they are small and heavily cropped, so the sharpness cost is marginal), which puts a
+60-card page at ~0.8–0.9 MB on a phone instead of ~1.3 MB. The detail view uses full DPR,
+where fidelity actually shows.
+
 ## Limitations
 
 - Single-user, single-process; no auth, because it binds to localhost by design.
@@ -73,7 +107,10 @@ The research phase's conclusions are visible in the UI rather than buried in a d
   wiring that in is Phase 12.
 - Batch selection and a full-screen viewer are not implemented.
 - The UI was verified by static analysis (JS syntax, every referenced element id, every API
-  path returning 200) and by exercising the API directly, not by visual regression testing.
+  path returning 200, balanced CSS at every breakpoint) and by exercising the API directly.
+  **It has not been viewed in a real browser** — the Claude in Chrome extension was not
+  connected during development, so there is no visual confirmation and no real-device testing
+  of the responsive tiers.
 
 ---
 
