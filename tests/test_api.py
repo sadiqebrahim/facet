@@ -357,3 +357,23 @@ def test_deleting_a_user_removes_their_learned_preferences(client):
     assert client.get("/api/admin/users", headers=ha).json()["users"] == [
         u for u in client.get("/api/admin/users", headers=ha).json()["users"]
         if u["username"] != "bob"]
+
+
+def test_auth_401_reports_the_real_reason(client):
+    """A wrong password must say so. The UI used to intercept every 401 and report
+    'signed out', which describes the wrong problem entirely."""
+    client.post("/api/auth/register", json={"username": "boss", "password": "secret123"})
+    r = client.post("/api/auth/login", json={"username": "boss", "password": "wrong"})
+    assert r.status_code == 401
+    assert "wrong username or password" in r.json()["detail"]
+
+
+def test_error_details_are_human_readable(client):
+    client.post("/api/auth/register", json={"username": "boss", "password": "secret123"})
+    for payload, expect in (
+        ({"username": "boss", "password": "secret123"}, "taken"),
+        ({"username": "ok", "password": "abc"}, "at least 6"),
+        ({"username": "x", "password": "secret123"}, "2-32"),
+    ):
+        d = client.post("/api/auth/register", json=payload).json()["detail"]
+        assert expect in d, f"unhelpful message for {payload}: {d}"

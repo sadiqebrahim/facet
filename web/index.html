@@ -385,6 +385,10 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
 <div class="gate" id="gate" hidden>
   <form class="gatebox" id="gateForm">
     <div class="brand" style="font-size:18px;margin-bottom:4px"><span class="dot"></span> Facet</div>
+    <div class="seg" style="margin:0 0 4px">
+      <button type="button" id="mSignin" aria-selected="true">Sign in</button>
+      <button type="button" id="mCreate" aria-selected="false">Create account</button>
+    </div>
     <p class="note" id="gateNote">Sign in to use your own taste model.</p>
     <input type="text" id="gUser" placeholder="Username" autocomplete="username" required>
     <div class="pw"><input type="password" id="gPass" placeholder="Password"
@@ -392,9 +396,9 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
       <button type="button" class="eye" id="gEye" aria-label="Show password"
         title="Show password">👁</button></div>
     <button class="btn primary" type="submit" id="gGo">Sign in</button>
-    <button class="btn" type="button" id="gSwap">Create an account instead</button>
     <button class="linkbtn" type="button" id="gForgot">Forgot your password?</button>
     <p class="note" id="gErr" style="color:var(--bad)"></p>
+    <p class="note" id="gOk" style="color:var(--good)" hidden></p>
     <p class="note" id="gHelp" hidden></p>
     <p class="note">Each account keeps its own likes, rejects and reference faces, so one
       person's taste never bleeds into another's.</p>
@@ -589,12 +593,27 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 let TOKEN=localStorage.getItem('facet-token')||'';
+// FastAPI reports problems as {"detail": "..."} - show that, not the raw JSON.
+function apiError(text, status){
+  try{ const j=JSON.parse(text); if(j && j.detail) return typeof j.detail==='string'?j.detail:JSON.stringify(j.detail); }
+  catch{}
+  return text.slice(0,200) || ('request failed ('+status+')');
+}
 const api=async(p,o={})=>{
   const h={...(o.headers||{})};
   if(TOKEN) h.Authorization='Bearer '+TOKEN;
   const r=await fetch(p,{...o,headers:h});
-  if(r.status===401){ TOKEN=''; localStorage.removeItem('facet-token'); showGate(); throw new Error('signed out'); }
-  if(!r.ok) throw new Error((await r.text()).slice(0,300));
+  if(!r.ok){
+    const body=await r.text();
+    // A 401 from /api/auth/* means "those credentials are wrong", NOT "your session
+    // expired". Hijacking it was why a wrong password reported "signed out" - an error
+    // that describes the wrong problem is worse than no error at all.
+    if(r.status===401 && !p.startsWith('/api/auth/')){
+      TOKEN=''; localStorage.removeItem('facet-token'); showGate();
+      throw new Error('Your session expired — please sign in again.');
+    }
+    throw new Error(apiError(body, r.status));
+  }
   return (r.headers.get('content-type')||'').includes('json')?r.json():r.text();};
 let RES=[], TOTAL=0, OFF=0, LIM=60, CUR=0, DENS=210, BUSY=false, STATS={}, LASTDIAG=null;
 
@@ -769,21 +788,52 @@ $('#gForgot').onclick=async()=>{
       : 'No administrator account exists yet. Create the first account — it becomes the admin.';
   }catch{ h.textContent='Cannot reach the server.'; }
 };
-$('#gSwap').onclick=()=>{ MODE=MODE==='login'?'register':'login';
-  $('#gGo').textContent=MODE==='login'?'Sign in':'Create account';
-  $('#gSwap').textContent=MODE==='login'?'Create an account instead':'I already have an account';
-  $('#gPass').autocomplete=MODE==='login'?'current-password':'new-password';
-  $('#gErr').textContent=''; };
+function setMode(m){
+  MODE=m;
+  $('#mSignin').ariaSelected = m==='login';
+  $('#mCreate').ariaSelected = m==='register';
+  $('#gGo').textContent = m==='login' ? 'Sign in' : 'Create account';
+  $('#gateNote').textContent = m==='login'
+    ? 'Sign in to use your own taste model.'
+    : 'Pick any username and password — at least 6 characters. Nothing leaves this machine.';
+  $('#gPass').autocomplete = m==='login' ? 'current-password' : 'new-password';
+  $('#gErr').textContent=''; $('#gOk').hidden=true; $('#gHelp').hidden=true;
+}
+$('#mSignin').onclick=()=>setMode('login');
+$('#mCreate').onclick=()=>setMode('register');
+
 $('#gateForm').onsubmit=async e=>{
-  e.preventDefault(); $('#gErr').textContent='';
+  e.preventDefault();
+  const btn=$('#gGo'), user=$('#gUser').value.trim(), pass=$('#gPass').value;
+  $('#gErr').textContent=''; $('#gOk').hidden=true;
+  if(!user || !pass){ $('#gErr').textContent='Enter a username and password.'; return; }
+  if(MODE==='register' && pass.length<6){
+    $('#gErr').textContent='Password must be at least 6 characters.'; return; }
+  btn.disabled=true; btn.textContent = MODE==='login'?'Signing in…':'Creating account…';
   try{
-    const r=await api('/api/auth/'+MODE,{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({username:$('#gUser').value.trim(),password:$('#gPass').value})});
+    const r=await api('/api/auth/'+MODE,{method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({username:user,password:pass})});
     TOKEN=r.token; localStorage.setItem('facet-token',TOKEN);
+    // Say plainly that it worked. Previously the panel just vanished, which is
+    // indistinguishable from nothing happening.
+    $('#gOk').hidden=false;
+    $('#gOk').textContent = MODE==='register'
+      ? `Account "${user}" created — signing you in…`
+      : `Signed in as ${user}…`;
+    await new Promise(r=>setTimeout(r,600));
     hideGate();
+    toast(MODE==='register' ? `Welcome, ${user} — your taste model starts empty`
+                            : `Signed in as ${user}`);
     if(r.migrated_default_profile) toast('Your existing preferences moved to this account');
     await boot();
-  }catch(err){ $('#gErr').textContent=err.message.replace(/^\{.*"detail":"?/,'').replace(/"?\}$/,''); }
+  }catch(err){
+    let m=err.message;
+    if(MODE==='login' && /wrong username or password/i.test(m))
+      m='Wrong username or password. If you have not made an account yet, use “Create account”.';
+    if(/taken/i.test(m)) m='That username already exists — switch to “Sign in”, or pick another.';
+    $('#gErr').textContent=m;
+  }finally{ btn.disabled=false; btn.textContent=MODE==='login'?'Sign in':'Create account'; }
 };
 $('#logout').onclick=async()=>{
   try{ await api('/api/auth/logout',{method:'POST'}); }catch{}
@@ -1155,7 +1205,12 @@ async function boot(){
   try{
     const st=await fetch('/api/auth/status',{headers:TOKEN?{Authorization:'Bearer '+TOKEN}:{}})
       .then(r=>r.json());
-    if(st.accounts_exist && !st.authenticated){ showGate(); return; }
+    if(st.accounts_exist && !st.authenticated){ setMode('login'); showGate(); return; }
+    if(!st.accounts_exist && !st.authenticated){
+      // First run: creating an account is the sensible default, and it becomes the admin.
+      setMode('register');
+      $('#gateNote').textContent='Create the first account — it becomes the administrator.';
+    }
     await boot();
   }catch(e){ $('#view').innerHTML=`<div class="state"><div class="ico">⚠</div>
     <h2>Can't reach the server</h2><p>${e.message}</p></div>`; }

@@ -111,3 +111,21 @@ def test_script_parses(page, tmp_path):
     r = subprocess.run([shutil.which("node"), "--check", str(f)],
                        capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
+
+
+def test_login_failures_are_not_reported_as_session_expiry(page):
+    """The api() wrapper must not hijack 401s from /api/auth/* - a wrong password is not
+    an expired session, and saying so sent a user hunting for the wrong problem."""
+    js = _script(page)
+    assert "!p.startsWith('/api/auth/')" in js, "401 interception must exempt auth endpoints"
+
+
+def test_account_creation_is_acknowledged(page):
+    """The gate used to just vanish on success, which is indistinguishable from nothing
+    happening."""
+    js = _script(page)
+    assert "gOk" in js and "created" in js
+
+
+def test_sign_in_and_create_are_separate_visible_modes(page):
+    assert 'id="mSignin"' in page and 'id="mCreate"' in page
