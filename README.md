@@ -3,11 +3,32 @@
 Face analysis, filtering and ranking. Point it at a directory of images, describe the
 faces you're looking for, and get back a ranked, explained result set.
 
-**Status: Phase 1 (research) complete, Phase 4 (baselines) underway. There is no UI yet —
-by design.** The project is empirical: models get selected by measurement, not by
-reputation.
+**Status: research and eleven experiments complete; indexing, ranking, API and UI shipped;
+multi-user hosting in place.** The project is empirical: models get selected by measurement,
+not by reputation, and several of the results contradicted the priors they were meant to
+confirm. Run it for yourself with `scripts/serve.py`; run it for other people via
+[`docs/HOSTING.md`](docs/HOSTING.md).
 
 ---
+
+> **Security notice — if you cloned this repository before 2026-09-07.**
+> `facet.db` and `feats/*.bin` were committed by mistake and are present in the git
+> history. Between them they contain image paths, face bounding boxes, **face embeddings**
+> (biometric data, re-identifiable without the source images) and the `users` table —
+> password hashes, salts and live session tokens. They are untracked as of this commit,
+> which stops new leakage but does **not** remove the old blobs from history.
+>
+> If any of those credentials were ever real:
+> 1. Change the passwords on every account.
+> 2. Sign out everywhere (`POST /api/auth/logout`, or delete the `sessions` rows) to kill
+>    the published tokens.
+> 3. Purge the blobs and force-push, then treat the repository as compromised until you do:
+>    ```
+>    git filter-repo --path facet.db --path facet.db-shm --path facet.db-wal --path feats --invert-paths
+>    git push --force-with-lease origin main
+>    ```
+>    GitHub caches unreachable objects; open a support request to have them dropped.
+
 
 ## What this is, and what it is not
 
@@ -132,8 +153,9 @@ detail view showing the original image with the detection box, the full predicte
 distribution, rater-disagreement and model-disagreement separately, the calibrated interval
 (or a clear "suppressed" marker when the face is out-of-distribution), and **the arithmetic
 that produced its rank**. Favourites, saved searches, CSV export, dark mode and keyboard
-navigation are included. Everything stays on the machine — the API makes no outbound request
-and binds to localhost. Details: [`docs/APP.md`](docs/APP.md).
+navigation are included. Images arrive by upload, by URL, or — on a local install — by
+pointing at a folder. A local install makes no outbound request and binds to localhost.
+Details: [`docs/APP.md`](docs/APP.md); to run it for other people, [`docs/HOSTING.md`](docs/HOSTING.md).
 
 ## Teaching it your taste
 

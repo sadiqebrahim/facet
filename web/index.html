@@ -450,6 +450,67 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.01ms !important;transition-duration:.01ms !important}
 }
+
+/* ---- card-anchored undo -------------------------------------------------
+   The countdown belongs on the thing being judged, not in a corner of the screen.
+   A toast forces you to look away from what you just decided about, and with more than
+   one judgement in flight it stopped being obvious which one "Undo" would reverse. */
+.card.pending{opacity:.999}
+.card.pending .ph img{filter:grayscale(1) brightness(.55)}
+.undoveil{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:8px;background:rgba(8,12,20,.72);backdrop-filter:blur(2px);
+  z-index:6;border-radius:inherit;text-align:center;padding:var(--s3)}
+.undoveil .what{font-size:12.5px;font-weight:650;color:#fff;letter-spacing:.01em}
+.undoveil .what.no{color:#ffb4b4} .undoveil .what.yes{color:#a8f0c6}
+.undoveil .ring{position:relative;width:46px;height:46px}
+.undoveil .ring svg{width:46px;height:46px;transform:rotate(-90deg)}
+.undoveil .ring circle{fill:none;stroke-width:3}
+.undoveil .ring .bg{stroke:rgba(255,255,255,.22)}
+.undoveil .ring .fg{stroke:#fff;stroke-linecap:round;transition:stroke-dashoffset .1s linear}
+.undoveil .ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:14px;
+  color:#fff;font-variant-numeric:tabular-nums}
+.undoveil button{background:#fff;color:#0b1220;border:0;border-radius:20px;padding:7px 16px;
+  font-size:12px;font-weight:700;cursor:pointer}
+.undoveil button:hover{background:var(--accent);color:var(--on-accent)}
+.undoveil .hint{font-size:10.5px;color:rgba(255,255,255,.6);line-height:1.4}
+
+/* ---- upload zones ------------------------------------------------------- */
+.drop{border:1.5px dashed var(--line2);border-radius:var(--r2);background:var(--surface2);
+  padding:var(--s5) var(--s4);text-align:center;cursor:pointer;transition:.15s;
+  display:flex;flex-direction:column;align-items:center;gap:6px}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-dim)}
+.drop .ico{font-size:22px;opacity:.8}
+.drop .big{font-size:13px;font-weight:600;color:var(--fg)}
+.drop .sub{font-size:11.5px;color:var(--fg3);line-height:1.45}
+.drop input[type=file]{display:none}
+.orline{display:flex;align-items:center;gap:var(--s2);color:var(--fg3);font-size:11px;
+  margin:var(--s2) 0}
+.orline::before,.orline::after{content:"";flex:1;height:1px;background:var(--line)}
+.quota{height:6px;border-radius:20px;background:var(--surface2);overflow:hidden}
+.quota i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.quota i.full{background:var(--bad)}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:5px;
+  margin-top:var(--s2)}
+.thumbs figure{position:relative;margin:0;aspect-ratio:1;border-radius:8px;overflow:hidden;
+  background:var(--surface2);border:1px solid var(--line)}
+.thumbs img{width:100%;height:100%;object-fit:cover;display:block}
+.thumbs button{position:absolute;top:2px;right:2px;width:18px;height:18px;border:0;
+  border-radius:50%;background:rgba(8,12,20,.8);color:#fff;font-size:11px;line-height:1;
+  cursor:pointer;padding:0;opacity:0;transition:.15s}
+.thumbs figure:hover button{opacity:1}
+.thumbs figure.ref{border-color:var(--accent)}
+.thumbs figure.refno{border-color:var(--bad)}
+
+/* ---- google button ------------------------------------------------------ */
+.gbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+  background:#fff;color:#1f1f1f;border:1px solid #dadce0;border-radius:var(--r1);
+  padding:10px 12px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.gbtn:hover{background:#f7f8f8;box-shadow:0 1px 3px rgba(60,64,67,.3)}
+.gbtn svg{width:17px;height:17px;flex:none}
+[data-theme=dark] .gbtn{background:#131a26;color:#e8eaed;border-color:#3c4043}
+[data-theme=dark] .gbtn:hover{background:#1b2433}
+.danger{color:var(--bad);border-color:var(--bad)}
+.danger:hover{background:var(--bad);color:#fff;border-color:var(--bad)}
 </style>
 </head>
 <body>
@@ -482,7 +543,14 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
       <button type="button" id="mSignin" aria-selected="true">Sign in</button>
       <button type="button" id="mCreate" aria-selected="false">Create account</button>
     </div>
-    <p class="note" id="gateNote">Sign in to use your own taste model.</p>
+    <p class="note" id="gateNote">Sign in to use your own library and taste model.</p>
+    <div id="gGoogleWrap" hidden>
+      <button type="button" class="gbtn" id="gGoogle">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.9 2.4 30.4 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.2C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9.1h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.2 5.6c4.2-3.9 6.6-9.6 6.6-16.4z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.4-.8-2.9-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C1 16.3 0 20 0 24s1 7.7 2.6 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.2-5.6c-2 1.4-4.6 2.2-8.7 2.2-6.3 0-11.6-4.1-13.5-9.9l-7.9 6.2C6.5 42.6 14.6 48 24 48z"/></svg>
+        Continue with Google
+      </button>
+      <div class="orline">or</div>
+    </div>
     <input type="text" id="gUser" placeholder="Username" autocomplete="username" required>
     <div class="pw"><input type="password" id="gPass" placeholder="Password"
         autocomplete="current-password" required>
@@ -493,8 +561,9 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
     <p class="note" id="gErr" style="color:var(--bad)"></p>
     <p class="note" id="gOk" style="color:var(--good)" hidden></p>
     <p class="note" id="gHelp" hidden></p>
-    <p class="note">Each account keeps its own likes, rejects and reference faces, so one
-      person's taste never bleeds into another's.</p>
+    <p class="note">Each account keeps its <b>own library</b> and its own taste model.
+      Photos you upload stay in your account — nobody else can search, see or download
+      them, administrators included.</p>
   </form>
 </div>
 <div class="backdrop" id="backdrop"></div>
@@ -548,16 +617,29 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
           <span class="num" id="pStrV">1.0×</span></div>
         <input type="range" id="pStr" min="0.25" max="3" step="0.25" value="1" class="wide">
         <div class="hr"></div>
-        <label class="lbl" for="refPath">Teach it from examples</label>
-        <input type="text" id="refPath" placeholder="/path/to/faces-you-like" class="wide">
-        <div class="btnrow">
-          <button class="btn sm" id="addRef">♥ I like these</button>
-          <button class="btn sm" id="addRefBad">✕ Not my type</button>
-        </div>
-        <div class="btnrow"><button class="btn sm ghost" id="resetPref">↺ Forget what it learned</button></div>
-        <p class="note">A single image or a whole folder. Faces are detected and encoded the
-          same way as your library, so they are directly comparable.</p>
+        <label class="lbl">Teach it from examples</label>
+        <div class="f"><label for="refKind">These are faces I</label>
+          <select id="refKind"><option value="like">♥ like</option>
+            <option value="dislike">✕ don't like</option></select></div>
+        <label class="drop" id="refDrop">
+          <span class="ico">✨</span>
+          <span class="big">Add taste samples</span>
+          <span class="sub">Drop photos here, or tap to choose.<br>One is enough to start.</span>
+          <input type="file" id="refFiles" accept="image/*" multiple>
+        </label>
+        <div class="orline">or paste a link</div>
+        <div class="f"><input type="text" id="refUrl" placeholder="https://…/photo.jpg" class="wide"></div>
+        <div class="btnrow"><button class="btn sm" id="refUrlGo">Add from URL</button></div>
+        <div class="f" id="refPathRow" hidden><input type="text" id="refPath"
+            placeholder="/path/on/the/server" class="wide"></div>
+        <div class="btnrow" id="refPathBtns" hidden>
+          <button class="btn sm ghost" id="addRef">Add server path</button></div>
         <div id="refList"></div>
+        <div class="btnrow" style="margin-top:8px">
+          <button class="btn sm ghost" id="resetPref">↺ Forget what it learned</button></div>
+        <p class="note">Reference faces are detected and encoded exactly like your library, so
+          they are directly comparable. They never appear in results — they only shape the
+          ranking.</p>
       </div>
     </details>
 
@@ -649,7 +731,14 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
         <input type="range" id="undoSec" min="0" max="60" step="1" value="10" class="wide">
         <p class="note">A like or reject hides the face straight away, but only starts shaping
           your model after this delay — so an undo inside the window leaves no trace.</p>
-        <div class="btnrow"><button class="btn sm ghost" id="logout">Sign out</button></div>
+        <div class="hr"></div>
+        <div class="btnrow">
+          <button class="btn sm ghost" id="expData">Download my data</button>
+          <button class="btn sm ghost" id="logout">Sign out</button></div>
+        <div class="btnrow" style="margin-top:6px">
+          <button class="btn sm ghost danger" id="delAcct">Delete my account</button></div>
+        <p class="note">Deleting removes your photos, the face embeddings derived from them and
+          your taste model. It cannot be undone.</p>
       </div>
     </details>
   </div>
@@ -679,20 +768,77 @@ kbd{background:var(--surface2);border:1px solid var(--line2);border-bottom-width
   </div>
 
   <div id="pLib" hidden>
-    <div class="sect">
-      <h3>Add images</h3>
-      <div class="f"><input type="text" id="root" placeholder="/home/you/Photos"></div>
-      <div class="f"><label>Limit (0 = all)</label><input type="number" id="ilimit" value="0" min="0"></div>
-      <div class="f"><label>Estimate age &amp; gender</label>
-        <label class="sw" for="iage"><input type="checkbox" id="iage" checked><i></i></label></div>
-      <div class="f"><label>Re-process everything</label>
-        <label class="sw" for="iforce"><input type="checkbox" id="iforce"><i></i></label></div>
-      <button class="btn primary" id="go" style="width:100%">Scan &amp; analyse</button>
-      <p class="note">Safe to re-run — unchanged files are skipped before anything is decoded.
-        Age &amp; gender is the slow stage; turn it off for a quick first pass.</p>
-    </div>
-    <div class="sect"><h3>Progress</h3><div id="prog" class="note">Idle.</div></div>
-    <div class="sect"><h3>Library</h3><div id="lib" class="note">—</div></div>
+    <details class="sect" open>
+      <summary>Add photos</summary>
+      <div class="body">
+        <label class="drop" id="libDrop">
+          <span class="ico">⬆</span>
+          <span class="big">Upload photos</span>
+          <span class="sub">Drop them here, or tap to choose.<br>
+            JPEG, PNG, WebP, GIF or BMP — up to 25MB each.</span>
+          <input type="file" id="libFiles" accept="image/*" multiple>
+        </label>
+        <div id="upProg" class="note" hidden></div>
+        <div class="orline">or paste links</div>
+        <div class="f"><input type="text" id="libUrl"
+            placeholder="https://…/photo.jpg  (one per line)" class="wide"></div>
+        <div class="btnrow"><button class="btn sm" id="libUrlGo">Fetch from URLs</button></div>
+        <p class="note">Only upload photos you have the right to use, and that the people in
+          them are happy to be judged on. See <b>Consent</b> below.</p>
+      </div>
+    </details>
+
+    <details class="sect" id="libLocalSect" hidden>
+      <summary>Index a server folder</summary>
+      <div class="body">
+        <div class="f"><input type="text" id="root" placeholder="/home/you/Photos" class="wide"></div>
+        <div class="f"><label>Limit (0 = all)</label><input type="number" id="ilimit" value="0" min="0"></div>
+        <div class="f"><label for="iforce">Re-process everything</label>
+          <label class="sw" for="iforce"><input type="checkbox" id="iforce"><i></i></label></div>
+        <button class="btn primary" id="go" style="width:100%">Scan &amp; analyse</button>
+        <p class="note">Only available on a local install. Unchanged files are skipped before
+          anything is decoded, so re-running is cheap.</p>
+      </div>
+    </details>
+
+    <details class="sect" open>
+      <summary>Options</summary>
+      <div class="body">
+        <div class="f"><label for="iage">Estimate age &amp; gender</label>
+          <label class="sw" for="iage"><input type="checkbox" id="iage" checked><i></i></label></div>
+        <p class="note">The slow stage — roughly 190× the cost of everything else. Turn it off
+          for a quick first pass and run it later.</p>
+      </div>
+    </details>
+
+    <details class="sect" open>
+      <summary>Progress <span class="w" id="progDot">·</span></summary>
+      <div class="body"><div id="prog" class="note">Idle.</div></div>
+    </details>
+
+    <details class="sect" open>
+      <summary>Your library <span class="w" id="libCount">0</span></summary>
+      <div class="body">
+        <div class="f"><label>Storage used</label><span class="num" id="quotaTxt">—</span></div>
+        <div class="quota"><i id="quotaFill"></i></div>
+        <div id="libThumbs" class="thumbs"></div>
+        <div id="lib" class="note">—</div>
+        <div class="btnrow" style="margin-top:8px">
+          <button class="btn sm ghost danger" id="clearLib">Delete everything</button></div>
+      </div>
+    </details>
+
+    <details class="sect">
+      <summary>Consent</summary>
+      <div class="body">
+        <p class="note">These are <b>estimates of how one group of raters would have scored a
+          face</b> — not facts about a person. Uploading a photo of somebody else means making
+          a judgement about them that they did not ask for. Ask first, keep it to people who
+          are in on the joke, and delete what you no longer need.</p>
+        <p class="note">Your photos are visible only to you. Deleting your account erases the
+          originals, the face embeddings and the taste model.</p>
+      </div>
+    </details>
   </div>
 </aside>
 
@@ -789,10 +935,13 @@ function skeleton(n=12){ $('#view').innerHTML=
    <div class="skel" style="height:14px;border-radius:4px"></div></div></div>'.repeat(n)}</div>`;}
 
 function onboarding(){ $('#view').innerHTML=`<div class="state">
-  <div class="ico">◳</div><h2>No images analysed yet</h2>
-  <p>Point Facet at a folder. It finds every face, scores it, and builds a searchable index.
-     Re-running later is incremental, so it only processes what changed.</p>
-  <button class="btn primary" onclick="document.querySelector('#tLib').click()">Add a folder →</button>
+  <div class="ico">◳</div><h2>Your library is empty</h2>
+  <p>Upload some photos — or paste image links — and Facet finds every face, scores it and
+     builds a searchable index. Then rate a few results and the ranking starts following
+     <i>your</i> taste rather than the average of a 2017 rating panel.</p>
+  <p style="font-size:12.5px;color:var(--fg3)">Your photos are private to your account. Nobody
+     else can search or see them.</p>
+  <button class="btn primary" onclick="document.querySelector('#tLib').click()">Add photos →</button>
   </div>`;}
 
 function noResults(d){ $('#view').innerHTML=`<div class="state">
@@ -826,7 +975,7 @@ function detailPx(){ return innerWidth<=820?Math.round(Math.min(1600,innerWidth*
 function card(x,i){
   const liked=(x.feedback||[]).includes('like');
   const est=x.attractiveness==null?'—':x.attractiveness.toFixed(2);
-  return `<article class="card${liked?' liked':''}" data-i="${i}">
+  return `<article class="card${liked?' liked':''}" data-i="${i}" data-face="${x.face_id}">
     <div class="ph"><img loading="lazy" decoding="async" src="${media('/api/crop/'+x.face_id+'?size='+thumbPx())}"
         onload="this.classList.add('on')" alt="Detected face"></div>
     <div class="rank">${Math.round(x.relevance*100)}%</div>
@@ -974,21 +1123,38 @@ function setMode(m){
   $('#mCreate').ariaSelected = m==='register';
   $('#gGo').textContent = m==='login' ? 'Sign in' : 'Create account';
   $('#gateNote').textContent = m==='login'
-    ? 'Sign in to use your own taste model.'
-    : 'Pick any username and password — at least 6 characters. Nothing leaves this machine.';
+    ? 'Sign in to use your own library and taste model.'
+    : 'Pick any username and a password of at least 8 characters. Your library is private to your account.';
   $('#gPass').autocomplete = m==='login' ? 'current-password' : 'new-password';
   $('#gErr').textContent=''; $('#gOk').hidden=true; $('#gHelp').hidden=true;
 }
 $('#mSignin').onclick=()=>setMode('login');
 $('#mCreate').onclick=()=>setMode('register');
+$('#gGoogle').onclick=()=>{ location.href='/api/auth/google/start?next=/'; };
+
+/* The callback hands the session back in the URL fragment - browsers never send fragments
+   to a server and never put them in a Referer header, so the token stays out of access
+   logs. Read it, store it, and scrub it from the address bar. */
+function tokenFromFragment(){
+  const h=location.hash.slice(1);
+  if(!h) return null;
+  const q=new URLSearchParams(h);
+  const err=q.get('error');
+  if(err){ history.replaceState(null,'',location.pathname+location.search);
+           showGate(decodeURIComponent(err)); return null; }
+  const tok=q.get('token');
+  if(!tok) return null;
+  history.replaceState(null,'',location.pathname+location.search);
+  return {token:tok, user:q.get('user')||'', isNew:q.get('new')==='1'};
+}
 
 $('#gateForm').onsubmit=async e=>{
   e.preventDefault();
   const btn=$('#gGo'), user=$('#gUser').value.trim(), pass=$('#gPass').value;
   $('#gErr').textContent=''; $('#gOk').hidden=true;
   if(!user || !pass){ $('#gErr').textContent='Enter a username and password.'; return; }
-  if(MODE==='register' && pass.length<6){
-    $('#gErr').textContent='Password must be at least 6 characters.'; return; }
+  if(MODE==='register' && pass.length<8){
+    $('#gErr').textContent='Password must be at least 8 characters.'; return; }
   btn.disabled=true; btn.textContent = MODE==='login'?'Signing in…':'Creating account…';
   try{
     const r=await api('/api/auth/'+MODE,{method:'POST',
@@ -1015,63 +1181,149 @@ $('#gateForm').onsubmit=async e=>{
     $('#gErr').textContent=m;
   }finally{ btn.disabled=false; btn.textContent=MODE==='login'?'Sign in':'Create account'; }
 };
+$('#expData').onclick=async()=>{
+  try{
+    const d=await api('/api/account/export');
+    const url=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],
+      {type:'application/json'}));
+    const a=document.createElement('a');
+    a.href=url; a.download='facet-my-data.json'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    toast('Downloaded');
+  }catch(e){ toast(e.message.slice(0,160)); }
+};
+$('#delAcct').onclick=async()=>{
+  if(!confirm('Delete your account?\n\nYour photos, the face data derived from them and your taste model are all erased. This cannot be undone.')) return;
+  const pw=prompt('Type your password to confirm (leave blank if you signed in with Google):')??'';
+  try{
+    await api('/api/account/delete',{method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({confirm:'delete',password:pw||null})});
+    TOKEN=''; localStorage.removeItem('facet-token');
+    alert('Your account and everything in it has been deleted.');
+    location.reload();
+  }catch(e){ toast(e.message.slice(0,200)); }
+};
 $('#signout').onclick=()=>$('#logout').click();
 $('#logout').onclick=async()=>{
   try{ await api('/api/auth/logout',{method:'POST'}); }catch{}
   TOKEN=''; localStorage.removeItem('facet-token'); location.reload();
 };
 
-/* ---------- undo ---------- */
-let UNDO=null;
+/* ---------- undo, anchored to the card you just judged ----------
+   Two things were wrong with the old toast:
+
+   * It was in the corner, so you had to look away from the photo you had just decided
+     about to reverse the decision.
+   * Every judgement started its own countdown, so several were live at once and "Undo"
+     meant whichever one the toast happened to be showing. That is a queue to chase, not
+     a safety net.
+
+   Now there is exactly one open judgement, it lives on its own card, and judging anything
+   else closes it immediately - which is also what the server does in add_feedback(). */
+let PENDING=null;
 function undoSecs(){ return +$('#undoSec').value; }
-function offerUndo(faceId, kind, secs){
-  clearTimeout(UNDO?.t); clearInterval(UNDO?.i);
-  const t=$('#toast'); const label=kind==='like'?'Liked':'Rejected';
-  const total=Math.max(secs,0.001); let left=secs;
-  t.innerHTML=`<span class="undoBar">
-    <svg class="undoRing" viewBox="0 0 24 24"><circle class="bg" cx="12" cy="12" r="9"/>
-      <circle class="fg" cx="12" cy="12" r="9" stroke-dasharray="56.5" stroke-dashoffset="0"/></svg>
-    <span>${label} — learning in <b id="undoLeft">${secs}</b>s</span>
-    <button id="undoBtn">Undo</button></span>`;
-  t.classList.add('on');
-  const ring=t.querySelector('.fg');
-  UNDO={faceId,kind,
-    i:setInterval(()=>{ left=Math.max(0,left-0.1);
-      const el=t.querySelector('#undoLeft'); if(el) el.textContent=Math.ceil(left);
-      if(ring) ring.style.strokeDashoffset=String(56.5*(1-left/total));
-    },100),
-    t:setTimeout(async ()=>{ clearInterval(UNDO.i); t.classList.remove('on'); UNDO=null;
-      await taste(); await run();
-      // The re-rank used to happen silently, so it looked like nothing had occurred.
-      toast('Ranking updated from your taste'); }, secs*1000)};
-  t.querySelector('#undoBtn').onclick=async()=>{
-    clearTimeout(UNDO.t); clearInterval(UNDO.i); t.classList.remove('on');
-    await api('/api/feedback/undo',{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({face_id:faceId,kind})});
-    UNDO=null; toast('Reversed — nothing was learned'); await taste(); run();
-  };
+function cardEl(faceId){ return document.querySelector('.card[data-face="'+faceId+'"]'); }
+
+function drawVeil(el, kind, secs){
+  const like = kind==='like';
+  const v=document.createElement('div');
+  v.className='undoveil';
+  v.innerHTML=`<span class="what ${like?'yes':'no'}">${like?'♥ Added to your likes':'✕ Removed'}</span>
+    <span class="ring"><svg viewBox="0 0 40 40">
+      <circle class="bg" cx="20" cy="20" r="17"/>
+      <circle class="fg" cx="20" cy="20" r="17" stroke-dasharray="106.8" stroke-dashoffset="0"/>
+    </svg><b>${Math.ceil(secs)}</b></span>
+    <button type="button">Undo</button>
+    <span class="hint">Learns when this runs out — or the moment you judge another photo.</span>`;
+  v.addEventListener('click',e=>e.stopPropagation());
+  v.querySelector('button').addEventListener('click',e=>{e.stopPropagation();undoPending();});
+  el.classList.add('pending'); el.appendChild(v);
+  return v;
 }
+
+function clearVeil(faceId){
+  const el=cardEl(faceId);
+  if(el){ el.classList.remove('pending'); el.querySelector('.undoveil')?.remove(); }
+  return el;
+}
+
+/* Close the open judgement. `rerank` re-runs the search so the effect is visible rather
+   than silent - which was the complaint about the previous build. */
+async function closePending(rerank){
+  if(!PENDING) return;
+  const {faceId,kind}=PENDING;
+  clearTimeout(PENDING.timer); clearInterval(PENDING.tick); PENDING=null;
+  const el=clearVeil(faceId);
+  if(kind==='dislike'||kind==='hide'){
+    RES=RES.filter(x=>x.face_id!==faceId); TOTAL=Math.max(0,TOTAL-1);
+    if(el){ el.style.transition='opacity .22s,transform .22s';
+            el.style.opacity='0'; el.style.transform='scale(.94)';
+            setTimeout(()=>el.remove(),230); }
+  }
+  await taste(); modelStatus();
+  if(rerank){ await run(); toast('Ranking updated from your taste'); }
+}
+
+async function undoPending(){
+  if(!PENDING) return;
+  const {faceId,kind}=PENDING;
+  clearTimeout(PENDING.timer); clearInterval(PENDING.tick); PENDING=null;
+  const el=clearVeil(faceId);
+  try{ await api('/api/feedback/undo',{method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({face_id:faceId,kind})}); }catch(e){ toast(e.message.slice(0,120)); }
+  const r0=RES.find(x=>x.face_id===faceId);
+  if(r0) r0.feedback=(r0.feedback||[]).filter(k=>k!==kind);
+  if(kind==='like'&&el){ el.classList.remove('liked');
+    const st=el.querySelector('.star'); if(st){ st.classList.remove('on'); st.textContent='☆'; } }
+  toast('Reversed — nothing was learned');
+  await taste(); modelStatus();
+}
+
+/* A judgement left open when the tab closes should still count: the user made it. */
+addEventListener('pagehide',()=>{
+  if(!PENDING) return;
+  try{ fetch('/api/feedback/commit',{method:'POST',keepalive:true,
+    headers:TOKEN?{Authorization:'Bearer '+TOKEN}:{}}); }catch{}
+});
 
 /* ---------- taught preference ---------- */
 async function judge(id,kind){
   const secs=undoSecs();
-  const r=await api('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({face_id:id,kind,undo_seconds:secs})});
-  if(!$('#pOn').checked){ $('#pOn').checked=true; }
-  if(kind==='dislike'){
-    // Only a rejection leaves the grid - the point of rejecting is not to see it again.
-    // Liking previously removed the card too, which read as "the app ate my favourite".
-    RES=RES.filter(x=>x.face_id!==id); TOTAL=Math.max(0,TOTAL-1);
+  // Judging anything new closes the previous window, here and on the server. Doing it
+  // first keeps the two in step even if the request below fails.
+  await closePending(false);
+  let r;
+  try{
+    r=await api('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({face_id:id,kind,undo_seconds:secs})});
+  }catch(e){ return toast(e.message.slice(0,140)); }
+  if(!$('#pOn').checked) $('#pOn').checked=true;
+  const r0=RES.find(x=>x.face_id===id);
+  if(r0) r0.feedback=[...new Set([...(r0.feedback||[]),kind])];
+  const el=cardEl(id);
+  if(kind==='like'&&el){ el.classList.add('liked');
+    const st=el.querySelector('.star'); if(st){ st.classList.add('on'); st.textContent='★'; } }
+
+  if(secs>0&&el){
+    const v=drawVeil(el,kind,secs);
+    const ring=v.querySelector('.fg'), num=v.querySelector('b'), end=Date.now()+secs*1000;
+    PENDING={faceId:id,kind,
+      tick:setInterval(()=>{ const left=Math.max(0,(end-Date.now())/1000);
+        num.textContent=Math.ceil(left);
+        ring.style.strokeDashoffset=String(106.8*(1-left/secs)); },100),
+      timer:setTimeout(async()=>{
+        try{ await api('/api/feedback/commit',{method:'POST'}); }catch{}
+        closePending(true); }, secs*1000)};
+    await taste(); modelStatus();
   }else{
-    const r0=RES.find(x=>x.face_id===id);
-    if(r0) r0.feedback=[...new Set([...(r0.feedback||[]),'like'])];
+    // No undo window: the judgement is already committed, so show its effect at once.
+    if(kind==='dislike'){ RES=RES.filter(x=>x.face_id!==id); TOTAL=Math.max(0,TOTAL-1); }
+    await taste(); modelStatus();
+    toast(kind==='like'?'Noted — more like this':'Hidden — fewer like this');
+    run();
   }
-  render(LASTDIAG);
-  // Refresh the taste readout straight away so the sidebar stops saying OFF while it is
-  // plainly learning, and so the strength bar moves as you rate.
-  await taste(); modelStatus();
-  if(secs>0) offerUndo(id,kind,secs);
-  else { toast(kind==='like'?'Noted — more like this':'Hidden — fewer like this'); run(); }
 }
 async function taste(){
   let d; try{ d=await api('/api/preference'); }catch{ return; }
@@ -1081,31 +1333,92 @@ async function taste(){
   $('#tastePct').textContent = on ? Math.round(eff*100)+'%' : (n?'paused':'off');
   $('#tastePct').style.background = on&&eff>0 ? '' : 'var(--surface2)';
   $('#tasteFill').style.width=(on?eff*100:0)+'%';
+  const refs=d.references||[];
   $('#tasteNote').innerHTML = (d.note || 'Not taught yet.')
     + (n && !on ? ' <b style="color:var(--warn)">Personalise ranking is off — switch it on to apply this.</b>' : '')
-    + (n ? `<br><span style="color:var(--fg2)">${d.n_likes||0} liked · ${d.n_dislikes||0} rejected${d.references?.length?` · ${d.references.length} reference`:''}</span>` : '');
-  const refs=d.references||[];
-  $('#refList').innerHTML = refs.length? `<div class="reflist">${refs.map(r=>
-    `<span><b>${r.kind==='like'?'♥':'✕'}</b>${r.path.split('/').pop().slice(0,18)}
-      <button data-del="${r.id}">×</button></span>`).join('')}</div>` : '';
+    + (n||refs.length ? `<br><span style="color:var(--fg2)">${d.n_likes||0} liked · ${d.n_dislikes||0} rejected${refs.length?` · ${refs.length} sample${refs.length===1?'':'s'}`:''}</span>` : '');
+  $('#refList').innerHTML = refs.length ? `<div class="thumbs">${refs.map(r=>
+    `<figure class="${r.kind==='like'?'ref':'refno'}" title="${r.kind==='like'?'Liked':'Not my type'}: ${r.name||''}">
+       <img src="${media('/api/preference/thumb/'+r.id)}" alt="" loading="lazy"
+            onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${r.kind==='like'?'♥':'✕'}',style:'display:grid;place-items:center;height:100%;color:var(--fg3)'}))">
+       <button data-del="${r.id}" title="Remove">×</button></figure>`).join('')}</div>` : '';
   $$('#refList [data-del]').forEach(b=>b.onclick=async()=>{
-    await fetch('/api/preference/references/'+b.dataset.del,{method:'DELETE'});
-    taste(); run(); });
+    await api('/api/preference/references/'+b.dataset.del,{method:'DELETE'});
+    await taste(); run(); });
 }
-async function addRefs(kind){
-  const path=$('#refPath').value.trim(); if(!path) return toast('Enter an image or folder path');
-  toast('Reading reference faces…');
+
+/* ---------- getting images in ----------
+   Three routes, because people arrive with their photos in three different places: on the
+   device in front of them, behind a link, or (self-hosted only) already on the server. */
+function bytes(n){ return n>=1e9?(n/1e9).toFixed(1)+'GB':n>=1e6?(n/1e6).toFixed(0)+'MB':(n/1e3).toFixed(0)+'kB'; }
+
+function wireDrop(dropSel, inputSel, onFiles){
+  const drop=$(dropSel), input=$(inputSel);
+  if(!drop||!input) return;
+  input.onchange=()=>{ if(input.files.length) onFiles([...input.files]); input.value=''; };
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{
+    e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{
+    e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop',e=>{
+    const fs=[...(e.dataTransfer?.files||[])].filter(f=>f.type.startsWith('image/'));
+    if(fs.length) onFiles(fs); else toast('Those were not image files');
+  });
+}
+
+async function postFiles(path, files, extra){
+  const fd=new FormData();
+  files.forEach(f=>fd.append('files',f,f.name));
+  if(extra) Object.entries(extra).forEach(([k,v])=>fd.append(k,v));
+  return api(path,{method:'POST',body:fd});   // no content-type: the browser sets the boundary
+}
+
+async function addTasteFiles(files){
+  const kind=$('#refKind').value;
+  toast(`Reading ${files.length} sample${files.length===1?'':'s'}…`);
+  try{
+    const r=await postFiles('/api/preference/upload',files,{kind});
+    const bad=[...(r.skipped||[]),...(r.errors||[])];
+    toast(`Added ${r.added} sample${r.added===1?'':'s'}`+(bad.length?` · ${bad.length} skipped`:''));
+    if(!r.added&&bad.length) toast('None usable: '+(bad[0].reason||bad[0].error));
+    if(r.added){ $('#pOn').checked=true; await taste(); modelStatus(); run(); }
+  }catch(e){ toast(e.message.slice(0,160)); }
+}
+
+async function addTasteUrl(){
+  const raw=$('#refUrl').value.trim();
+  if(!raw) return toast('Paste an image link first');
+  toast('Fetching…');
+  try{
+    const r=await api('/api/library/url',{method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({urls:raw.split(/\s+/).filter(Boolean),target:'reference',
+                           kind:$('#refKind').value})});
+    toast(`Added ${r.added||0} sample${(r.added||0)===1?'':'s'}`);
+    if(r.added){ $('#refUrl').value=''; $('#pOn').checked=true;
+                 await taste(); modelStatus(); run(); }
+    else if(r.errors?.length) toast(r.errors[0].error);
+  }catch(e){ toast(e.message.slice(0,160)); }
+}
+
+async function addRefsFromPath(){
+  const path=$('#refPath').value.trim();
+  if(!path) return toast('Enter an image or folder path');
   try{
     const r=await api('/api/preference/references',{method:'POST',
-      headers:{'content-type':'application/json'},body:JSON.stringify({paths:[path],kind})});
-    toast(`Added ${r.added} reference face${r.added===1?'':'s'}`
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({paths:[path],kind:$('#refKind').value})});
+    toast(`Added ${r.added} sample${r.added===1?'':'s'}`
       + (r.skipped.length?` · ${r.skipped.length} skipped`:''));
     if(r.added){ $('#pOn').checked=true; $('#refPath').value=''; await taste(); run(); }
-    else if(r.skipped.length) toast('None usable: '+r.skipped[0].reason);
-  }catch(e){ toast(e.message.slice(0,120)); }
+  }catch(e){ toast(e.message.slice(0,160)); }
 }
-$('#addRef').onclick=()=>addRefs('like');
-$('#addRefBad').onclick=()=>addRefs('dislike');
+
+wireDrop('#refDrop','#refFiles',addTasteFiles);
+$('#refUrlGo').onclick=addTasteUrl;
+$('#refUrl').onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();addTasteUrl();} };
+$('#addRef').onclick=addRefsFromPath;
+
 $('#resetPref').onclick=async()=>{ if(!confirm('Forget everything Facet has learned about your taste?')) return;
   await api('/api/preference/reset',{method:'POST'}); $('#pOn').checked=false;
   await taste(); run(); toast('Preferences cleared'); };
@@ -1197,27 +1510,103 @@ $('#go').onclick=async()=>{
       body:JSON.stringify({roots:[r],limit:+$('#ilimit').value,force:$('#iforce').checked,
         predict_age:$('#iage').checked})});
     toast('Analysis started'); poll();
-  }catch(e){ toast(e.message.slice(0,120)); }
+  }catch(e){ toast(e.message.slice(0,160)); }
 };
+
+async function uploadLibrary(files){
+  const box=$('#upProg'); box.hidden=false;
+  const CHUNK=25;                       // keep each request small enough to report on
+  let done=0, failed=0;
+  for(let i=0;i<files.length;i+=CHUNK){
+    const part=files.slice(i,i+CHUNK);
+    box.innerHTML=`Uploading ${done+1}–${Math.min(done+part.length,files.length)} of ${files.length}…`;
+    try{
+      const r=await postFiles('/api/library/upload',part);
+      done+=r.accepted||0; failed+=(r.errors||[]).length;
+      if(r.errors?.length) box.innerHTML+=`<br><span style="color:var(--warn)">${r.errors[0].error}</span>`;
+    }catch(e){ failed+=part.length;
+      box.innerHTML=`<span style="color:var(--bad)">${e.message.slice(0,160)}</span>`; }
+  }
+  box.innerHTML=`Uploaded <b>${done}</b> image${done===1?'':'s'}`
+    +(failed?` · <span style="color:var(--warn)">${failed} rejected</span>`:'')+'. Analysing…';
+  if(done){ poll(); }
+}
+
+async function fetchLibraryUrls(){
+  const raw=$('#libUrl').value.trim();
+  if(!raw) return toast('Paste one or more image links');
+  const urls=raw.split(/\s+/).filter(Boolean);
+  toast(`Fetching ${urls.length} image${urls.length===1?'':'s'}…`);
+  try{
+    const r=await api('/api/library/url',{method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({urls,target:'library'})});
+    $('#libUrl').value='';
+    toast(`Fetched ${r.accepted}`+( (r.errors||[]).length?` · ${r.errors.length} failed`:''));
+    if(r.errors?.length) $('#upProg').innerHTML=
+      `<span style="color:var(--warn)">${r.errors[0].url}: ${r.errors[0].error}</span>`;
+    $('#upProg').hidden=false; poll();
+  }catch(e){ toast(e.message.slice(0,160)); }
+}
+
+wireDrop('#libDrop','#libFiles',uploadLibrary);
+$('#libUrlGo').onclick=fetchLibraryUrls;
+$('#clearLib').onclick=async()=>{
+  if(!confirm('Delete every photo in your library, and everything learned from them? This cannot be undone.')) return;
+  try{
+    const r=await api('/api/library',{method:'DELETE'});
+    toast(`Deleted ${r.images_removed} image${r.images_removed===1?'':'s'}`);
+    await stats(); await libraryList(); run();
+  }catch(e){ toast(e.message.slice(0,160)); }
+};
+
 const STAGES=[['scanning and encoding','Finding & encoding faces'],
   ['scoring attractiveness','Scoring attractiveness'],
   ['estimating age and gender (slow)','Estimating age & gender'],
   ['finding duplicates','Finding duplicates']];
 async function poll(){
   let s; try{ s=await api('/api/index/status'); }catch{ return; }
-  const p=$('#prog');
-  if(s.status==='idle'){ p.textContent='Idle.'; return; }
-  if(s.status==='failed'){ p.innerHTML=`<span style="color:var(--bad)">Failed: ${s.error}</span>`; return; }
+  const p=$('#prog'), dot=$('#progDot');
+  if(s.status==='idle'){ p.textContent='Idle.'; if(dot) dot.textContent='·'; return; }
+  if(s.status==='failed'){ p.innerHTML=`<span style="color:var(--bad)">Failed: ${s.error}</span>`;
+    if(dot) dot.textContent='failed'; return; }
   const at=STAGES.findIndex(x=>x[0]===s.stage);
+  if(dot) dot.textContent = s.running?'running':'done';
   p.innerHTML = (s.running?'<div class="prog"><i></i></div>':'')
+    + (s.note?`<p class="note" style="margin:0 0 6px">${s.note}</p>`:'')
     + `<div class="stagelist">${STAGES.map(([k,label],i)=>
         `<div class="${!s.running||i<at?'done':i===at?'now':''}">${!s.running||i<at?'✓':i===at?'▸':'·'} ${label}</div>`).join('')}</div>`
     + `<p class="note" style="margin-top:10px">${s.indexed??0} images · ${s.faces??0} faces`
     + (s.skipped?` · ${s.skipped} unchanged`:'') + (s.failed?` · <span style="color:var(--bad)">${s.failed} failed</span>`:'')
-    + '</p>' + (s.errors?.length?`<p class="note">e.g. ${s.errors[0].error}</p>`:'');
+    + '</p>' + (s.errors?.length?`<p class="note">e.g. ${s.errors[0].error}</p>`:'')
+    // A stage can fail on its own now (a full GPU, most often) without losing the run.
+    // Say which one, because "done" with no age estimates is otherwise a mystery.
+    + (s.warnings?.length?`<p class="note" style="color:var(--warn)">${s.warnings.join('<br>')}
+        <br>The rest of the run completed — re-run to retry the failed stage.</p>`:'');
   if(s.running){ setTimeout(poll,1200); }
-  else { await stats(); toast('Analysis complete'); run(); }
+  else { await stats(); await libraryList(); toast('Analysis complete'); run(); }
 }
+
+async function libraryList(){
+  let d; try{ d=await api('/api/library?limit=48'); }catch{ return; }
+  $('#libCount').textContent=d.total.toLocaleString();
+  const q=d.storage||{};
+  const pct=Math.min(100,q.used_pct||0);
+  $('#quotaTxt').textContent=`${bytes(q.used_bytes||0)} / ${bytes(q.quota_bytes||0)}`;
+  const fill=$('#quotaFill'); fill.style.width=pct+'%'; fill.classList.toggle('full',pct>90);
+  $('#libThumbs').innerHTML=d.images.map(im=>
+    `<figure title="${im.name} — ${im.n_faces} face${im.n_faces===1?'':'s'}${im.status!=='ok'?' ('+im.status+')':''}">
+       <img src="${media('/api/image/'+im.id+'?max_px=128')}" alt="" loading="lazy">
+       <button data-rm="${im.id}" title="Remove">×</button></figure>`).join('');
+  $$('#libThumbs [data-rm]').forEach(b=>b.onclick=async e=>{
+    e.preventDefault();
+    await api('/api/library/'+b.dataset.rm,{method:'DELETE'});
+    await stats(); await libraryList(); run(); });
+  if(d.total>d.images.length)
+    $('#libThumbs').insertAdjacentHTML('afterend',
+      `<p class="note">Showing the ${d.images.length} most recent of ${d.total}.</p>`);
+}
+
 async function stats(){
   STATS=await api('/api/stats');
   const html=`<span><b>${STATS.images.toLocaleString()}</b> images</span>
@@ -1374,6 +1763,14 @@ async function loadSaved(){
 }
 
 async function boot(){
+  const fromGoogle=tokenFromFragment();
+  if(fromGoogle){
+    TOKEN=fromGoogle.token; localStorage.setItem('facet-token',TOKEN);
+    hideGate();
+    toast(fromGoogle.isNew
+      ? `Welcome, ${fromGoogle.user} — your library starts empty`
+      : `Signed in as ${fromGoogle.user}`);
+  }
   const a=await api('/api/about');
   $('#banner').hidden=false;
   $('#banner').innerHTML=`<div><b>These are model estimates, not measurements.</b>
@@ -1381,6 +1778,7 @@ async function boot(){
     <button onclick="this.parentElement.hidden=true" title="Dismiss">×</button>`;
   let who;
   try{ who=await api('/api/auth/status'); }catch{ who={open_mode:true}; }
+  $('#gGoogleWrap').hidden = !(who.google && who.google.enabled);
   $('#who').innerHTML = who.user
     ? `Signed in as <b>${who.user}</b>${who.is_admin?'<span class="rolechip">admin</span>':''}`
     : 'Open mode — <b>no account</b>. Create one for a private taste model.';
@@ -1393,7 +1791,16 @@ async function boot(){
     tab('admin');
     toast('An administrator reset your password — please set a new one');
   }
+  // Server-path input only exists on a deployment that allows it. Showing a control that
+  // always 403s would be worse than not showing one at all.
+  let mine={};
+  try{ mine=await api('/api/auth/me'); }catch{}
+  const local=!!mine.server_paths_allowed;
+  $('#libLocalSect').hidden=!local;
+  $('#refPathRow').hidden=!local; $('#refPathBtns').hidden=!local;
+
   await stats(); await loadSaved(); await taste(); modelStatus();
+  await libraryList();
   STATS.ready ? run() : onboarding();
 }
 

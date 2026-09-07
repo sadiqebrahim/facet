@@ -98,6 +98,9 @@ class Filters:
 
 @dataclass
 class QuerySpec:
+    #: Whose library to search. Set by the API from the session, never by the client -
+    #: it is the only thing standing between two accounts on the same server.
+    owner: str = ""
     age: AgeCriterion | None = None
     gender: GenderCriterion | None = None
     attractiveness: AttractivenessCriterion | None = None
@@ -115,6 +118,7 @@ class QuerySpec:
         d = dict(d or {})
         prefs = d.get("preferences", d)
         spec = cls(
+            owner=str(d.get("owner") or ""),
             filters=Filters(**(d.get("filters") or {})),
             personalisation=Personalisation(**(d.get("personalisation") or {})),
             sort_by=d.get("sort_by", d.get("ranking", {}).get("sort_by", "relevance")),

@@ -29,10 +29,17 @@ demographic skew. A client cannot render a bare attractiveness score without als
 caveats in hand. Tests assert this for both the JSON and the CSV path — a spreadsheet of
 context-free numbers is precisely how an estimate turns into an apparent measurement.
 
-**Nothing leaves the machine.** There is no outbound request anywhere in the API. Images are
-read from local disk and served to a local browser, and `serve.py` binds to `127.0.0.1`,
-warning if asked to do otherwise. Face embeddings are biometric data (`LICENSING.md §4`), so
-local-only is the default rather than an option.
+**Outbound requests are enumerable, and there are none by default.** A local install still
+makes zero: images are read from disk and served to a local browser, and `serve.py` binds to
+`127.0.0.1`. Hosting adds exactly two, both opt-in and both named in `api/app.py`'s imports —
+Google's token endpoint during sign-in (`FACET_GOOGLE_CLIENT_ID`), and fetching an image a
+user pasted a URL for. Face embeddings are biometric data (`LICENSING.md §4`), so this stays
+a property you can check rather than a promise. See [`HOSTING.md`](HOSTING.md).
+
+**Accounts do not share data.** Every image row carries an `owner` and every read path joins
+through it — search, media, face detail, statistics, saved searches. Administrators are not
+exempt; there is no endpoint that opens somebody else's library. `HOSTING.md` §2 is the whole
+mechanism in one page.
 
 ## The UI
 

@@ -87,6 +87,7 @@ class SearchEngine:
         self.features_dir = Path(features_dir) if features_dir else None
         self._pct_cache: dict[str, tuple[np.ndarray, np.ndarray]] = {}
         self._store = None
+        self._gen = self.index.generation()
 
     # ------------------------------------------------------- personalisation
 
@@ -110,6 +111,18 @@ class SearchEngine:
                                    row["crop_version"], dim=_json.loads(meta.read_text())["dim"])
         return self._store
 
+    def _refresh_if_stale(self) -> None:
+        """Drop cached reads if anything indexed since this engine was built.
+
+        One SELECT against a single-row table, so it is cheaper than being wrong: a search
+        run against a stale feature store reads rows that no longer mean what they meant.
+        """
+        gen = self.index.generation()
+        if gen != self._gen:
+            self._gen = gen
+            self._pct_cache.clear()
+            self._store = None
+
     def preference_model(self, user: str = "default"):
         """Build the user's preference model from their feedback and reference faces.
 
@@ -128,8 +141,10 @@ class SearchEngine:
         import time as _time
         rows = list(self.index.conn.execute(
             "SELECT f.feature_row, fb.kind FROM feedback fb JOIN faces f ON f.id=fb.face_id "
-            "WHERE fb.user=? AND fb.kind IN ('like','dislike') AND f.feature_row IS NOT NULL "
-            "AND COALESCE(fb.commit_at,0) <= ?", (user, _time.time())))
+            "JOIN images i ON i.id=f.image_id "
+            "WHERE fb.user=? AND i.owner=? AND fb.kind IN ('like','dislike') "
+            "AND f.feature_row IS NOT NULL AND COALESCE(fb.commit_at,0) <= ?",
+            (user, user, _time.time())))
         refs = self.index.references(user)
         dim = store.dim
         liked, disliked = [], []
@@ -149,30 +164,46 @@ class SearchEngine:
 
     # ------------------------------------------------------------ collection stats
 
-    def _percentile_lookup(self, key: str):
-        """Empirical CDF over the whole collection, computed once and cached."""
-        if key in self._pct_cache:
-            return self._pct_cache[key]
-        col = "value" if key == "mean" else "p_ge4"
+    def _percentile_lookup(self, key: str, owner: str = ""):
+        """Empirical CDF over ONE owner's collection, computed once and cached.
+
+        Per-owner, because "top 20%" is a claim about the collection being searched. Pooling
+        every account's photos would mean your threshold moved when a stranger uploaded
+        theirs - and would quietly make the ranking depend on data you cannot see.
+        """
+        ck = f"{owner}\x00{key}"
+        if ck in self._pct_cache:
+            return self._pct_cache[ck]
+        join = ("FROM predictions p JOIN faces f ON f.id=p.face_id "
+                "JOIN images i ON i.id=f.image_id "
+                "WHERE p.model='beauty' AND i.owner=?")
         if key == "mean":
             rows = self.index.conn.execute(
-                "SELECT value v FROM predictions WHERE model='beauty' AND value IS NOT NULL")
+                f"SELECT p.value v {join} AND p.value IS NOT NULL", (owner,))
             vals = np.array([r["v"] for r in rows], dtype=np.float64)
         else:
             rows = self.index.conn.execute(
-                "SELECT extra FROM predictions WHERE model='beauty' AND extra IS NOT NULL")
-            vals = np.array([json.loads(r["extra"]).get("p_ge4", np.nan) for r in rows],
+                f"SELECT p.extra e {join} AND p.extra IS NOT NULL", (owner,))
+            vals = np.array([json.loads(r["e"]).get("p_ge4", np.nan) for r in rows],
                             dtype=np.float64)
             vals = vals[np.isfinite(vals)]
         order = np.sort(vals)
         pct = percentile_ranks(order) if len(order) else order
-        self._pct_cache[key] = (order, pct)
+        self._pct_cache[ck] = (order, pct)
         return order, pct
 
-    def _to_percentile(self, key: str, value: float | None) -> float | None:
+    def invalidate_percentiles(self, owner: str | None = None) -> None:
+        """Drop cached CDFs after new predictions land."""
+        if owner is None:
+            self._pct_cache.clear()
+        else:
+            for k in [k for k in self._pct_cache if k.startswith(f"{owner}\x00")]:
+                self._pct_cache.pop(k, None)
+
+    def _to_percentile(self, key: str, value: float | None, owner: str = "") -> float | None:
         if value is None:
             return None
-        order, pct = self._percentile_lookup(key)
+        order, pct = self._percentile_lookup(key, owner)
         if len(order) == 0:
             return None
         i = int(np.clip(np.searchsorted(order, value), 0, len(order) - 1))
@@ -181,8 +212,12 @@ class SearchEngine:
     # --------------------------------------------------------------------- search
 
     def search(self, spec: QuerySpec) -> SearchResponse:
+        self._refresh_if_stale()
         f = spec.filters
-        where, params = ["f.feature_row IS NOT NULL"], []
+        # The owner predicate is first and unconditional. Every other clause here is a
+        # preference; this one is the tenancy boundary, and a query that reached the
+        # database without it would return other people's photographs.
+        where, params = ["f.feature_row IS NOT NULL", "i.owner = ?"], [spec.owner]
         if f.min_quality > 0:
             where.append("COALESCE(f.quality,0) >= ?"); params.append(f.min_quality)
         if f.min_face_px > 0:
@@ -322,7 +357,7 @@ class SearchEngine:
                 c = spec.attractiveness
                 key = "p_ge4" if c.use_p_ge4 else "mean"
                 raw = extra.get("p_ge4") if c.use_p_ge4 else r["beauty"]
-                pct = self._to_percentile(key, raw)
+                pct = self._to_percentile(key, raw, spec.owner)
                 # Blend the user's taste on top of the population estimate (E14's residual
                 # formulation). alpha grows with how much the user has taught it and is
                 # capped, so the population model never drops out entirely.
