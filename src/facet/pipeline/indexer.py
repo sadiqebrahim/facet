@@ -65,17 +65,24 @@ class IndexStats:
 
 class Indexer:
     def __init__(self, index_path, features_dir, config: IndexConfig | None = None):
+        from ..models.device import prefer_gpu
+
         self.cfg = config or IndexConfig()
         self.index = Index(index_path)
+        # Ask whether the card has room before taking it. On a shared box it often does
+        # not, and a CPU pass that finishes beats a CUDA pass that dies halfway through
+        # somebody's import (models/device.py).
+        self.use_gpu = bool(self.cfg.use_gpu and prefer_gpu(1200))
+        self.device = "gpu" if self.use_gpu else "cpu"
         self.detector = InsightFaceDetector(
             pack=self.cfg.pack, det_size=self.cfg.det_size,
-            pad_frac=self.cfg.pad_frac, use_gpu=self.cfg.use_gpu,
+            pad_frac=self.cfg.pad_frac, use_gpu=self.use_gpu,
         )
-        self.embedder = ArcFaceEmbedder(pack=self.cfg.pack, use_gpu=self.cfg.use_gpu)
+        self.embedder = ArcFaceEmbedder(pack=self.cfg.pack, use_gpu=self.use_gpu)
         self.clip = None
         if self.cfg.clip:
             from ..models.clip_backend import ClipEmbedder
-            self.clip = ClipEmbedder(use_gpu=self.cfg.use_gpu)
+            self.clip = ClipEmbedder(use_gpu=self.use_gpu)
 
         self.encoder_version = self.embedder.version + (
             f"+{self.clip.version}" if self.clip else ""
@@ -122,15 +129,22 @@ class Indexer:
     # -------------------------------------------------------------------- main
 
     def index_directories(self, roots, force: bool = False, limit: int = 0,
-                          progress_every: int = 200) -> IndexStats:
+                          progress_every: int = 200, owner: str = "",
+                          source: str = "local") -> IndexStats:
+        """Index `roots` into `owner`'s library.
+
+        The owner is threaded all the way down to the image row rather than applied
+        afterwards: a half-finished run that left rows unattributed would be a run whose
+        images are visible to nobody, or - far worse - to everybody.
+        """
         cfg = self.cfg
-        plan = plan_scan(roots, self.index.image_fingerprints(), force=force)
+        plan = plan_scan(roots, self.index.image_fingerprints(owner), force=force)
         todo = plan.to_process
         if limit:
             todo = todo[:limit]
         print(f"scan: {plan.summary()}  -> processing {len(todo)}")
 
-        run_id = self.index.start_run(str(roots), cfg.hash(), cfg.__dict__)
+        run_id = self.index.start_run(str(roots), cfg.hash(), cfg.__dict__, owner=owner)
         st = IndexStats(seen=len(plan.to_process) + len(plan.unchanged),
                         skipped=len(plan.unchanged))
         t0 = time.time()
@@ -161,6 +175,7 @@ class Indexer:
             img, err = load_image(cand.path)
             if img is None:
                 self.index.upsert_image(
+                    owner=owner, source=source,
                     path=cand.path, size_bytes=cand.size_bytes, mtime=cand.mtime,
                     status="corrupt", error=err, n_faces=0,
                     detector_version=self.detector.version,
@@ -171,6 +186,7 @@ class Indexer:
             else:
                 faces, crops = self._detect_and_crop(img)
                 image_id = self.index.upsert_image(
+                    owner=owner, source=source,
                     path=cand.path, content_hash=content_hash(cand.path),
                     size_bytes=cand.size_bytes, mtime=cand.mtime,
                     width=img.shape[1], height=img.shape[0],

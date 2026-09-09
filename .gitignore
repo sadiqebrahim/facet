@@ -26,3 +26,20 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .DS_Store
+
+# ---------------------------------------------------------------------------
+# The index and the feature store. Both were committed by mistake, and both are
+# exactly what docs/LICENSING.md section 4 says must never leave the machine:
+#
+#   facet.db   image paths, bounding boxes, keypoints, feedback - AND the users
+#              table (password hashes, salts) and live session tokens.
+#   feats/*.bin  face embeddings, which are re-identifiable without the source
+#              images. This is biometric data (GDPR Art. 9).
+#
+# Untracking them stops the bleeding; it does not remove them from history.
+# See README "If you cloned this before <date>".
+/facet.db
+/facet.db-*
+/facet.db.*.bak
+/feats/
+*.bak

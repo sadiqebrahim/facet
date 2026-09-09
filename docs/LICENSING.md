@@ -95,7 +95,10 @@ including for images of people who never interacted with the system.
 
 **Engineering commitments (cheap now, expensive to retrofit):**
 1. **Local-only by default.** No image, crop, embedding or prediction leaves the machine. No
-   telemetry, no remote inference.
+   telemetry, no remote inference. Hosting the app adds exactly two outbound requests, both
+   opt-in and both auditable in `api/app.py`'s imports: Google's token endpoint during
+   sign-in, and fetching an image the user pasted a URL for. Neither carries an image, crop,
+   embedding or prediction *out*.
 2. **Deletion means deletion.** Removing an image purges its embeddings, crops, thumbnails, cached
    features and index rows — not just a database row.
 3. **The index is sensitive at rest.** Embeddings are re-identifiable without the source images.
@@ -103,6 +106,21 @@ including for images of people who never interacted with the system.
    scripts, never data.
 5. **Retention limits** are configurable and enforced.
 6. **A documented purge path** the user can actually run.
+
+**What multi-tenant hosting adds.** Once the service holds several people's photographs, two
+further commitments become load-bearing rather than nice-to-have, and both are implemented:
+
+7. **Isolation is enforced, not assumed.** Every image row carries an owner and every read
+   path joins through it, administrators included (`docs/HOSTING.md` §2).
+8. **Access and erasure are self-service.** `GET /api/account/export` answers "what do you
+   hold on me"; `POST /api/account/delete` erases the account, the uploaded originals, the
+   derived embeddings and the taste model. A service that can only do this by hand cannot
+   honour a GDPR Art. 15 or Art. 17 request at the speed the regulation expects.
+
+Still outstanding for a commercial deployment: a privacy notice naming a controller and a
+legal basis, a retention schedule with an actual number in it, and — in BIPA jurisdictions —
+written consent from the people *in* the photographs, which is not the same as consent from
+the person who uploaded them. See `docs/MARKET.md` §7.
 
 ---
 

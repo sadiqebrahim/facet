@@ -255,3 +255,97 @@ def test_core_form_styles_are_present(page):
     for rule in (".f{", ".num{", ".sw{", ".sw i{", "input[type=range]{",
                  "::-moz-range-thumb", "::-webkit-slider-thumb"):
         assert rule in css, f"missing core style: {rule}"
+
+
+# ------------------------------------------------------- hosted-app UI surface
+
+def test_undo_is_anchored_to_the_card_not_a_toast(page):
+    """The countdown belongs on the photo you just judged. A corner toast makes you look
+    away from the thing you are deciding about, and with several in flight it stopped being
+    clear which one Undo would reverse."""
+    js, css = _script(page), _style(page)
+    assert "function drawVeil(" in js and "undoveil" in js
+    assert ".undoveil{" in css
+    assert "offerUndo" not in js, "the old toast-based undo must be gone"
+    assert 'data-face="${x.face_id}"' in js, "cards need an id the veil can find them by"
+
+
+def test_only_one_judgement_is_ever_pending(page):
+    """Judging anything else closes the previous window - the client must do this too, not
+    just the server, or the veil outlives the judgement it describes."""
+    js = _script(page)
+    body = re.search(r"async function judge\(id,kind\)\{(.*?)\n\}", js, re.S).group(1)
+    assert "await closePending(false)" in body
+    assert body.index("closePending") < body.index("/api/feedback'"), \
+        "the previous judgement must be closed before the new one is recorded"
+    assert "let PENDING=null" in js
+
+
+def test_an_open_judgement_survives_the_tab_closing(page):
+    """A judgement the user made should count even if they walk away mid-countdown."""
+    js = _script(page)
+    assert "pagehide" in js and "/api/feedback/commit" in js and "keepalive:true" in js
+
+
+def test_upload_routes_exist_for_both_library_and_taste(page):
+    js = _script(page)
+    for el in ("libDrop", "libFiles", "refDrop", "refFiles"):
+        assert f'id="{el}"' in page, f"missing upload control {el}"
+    assert "/api/library/upload" in js and "/api/preference/upload" in js
+    assert "function wireDrop(" in js, "drag and drop must be wired, not just a file input"
+
+
+def test_uploads_do_not_set_their_own_content_type(page):
+    """Setting content-type by hand on a FormData post strips the multipart boundary and
+    every upload fails with a parse error."""
+    js = _script(page)
+    body = re.search(r"async function postFiles\(([^)]*)\)\{(.*?)\n\}", js, re.S).group(2)
+    code = re.sub(r"//.*", "", body)          # the comment says "content-type" on purpose
+    assert "FormData" in code and "content-type" not in code.lower()
+
+
+def test_url_import_is_available_for_both_targets(page):
+    js = _script(page)
+    assert 'id="libUrl"' in page and 'id="refUrl"' in page
+    assert "/api/library/url" in js
+    assert "target:'reference'" in js and "target:'library'" in js
+
+
+def test_google_sign_in_is_offered_and_hidden_when_unconfigured(page):
+    js = _script(page)
+    assert 'id="gGoogle"' in page and 'class="gbtn"' in page
+    assert "/api/auth/google/start" in js
+    assert "gGoogleWrap').hidden" in js, "the button must hide when Google is not set up"
+
+
+def test_the_session_token_is_read_from_the_fragment(page):
+    """The callback returns the token in the URL fragment: browsers never send fragments to
+    a server or put them in a Referer header, so it stays out of access logs."""
+    js = _script(page)
+    assert "function tokenFromFragment(" in js
+    assert "location.hash" in js and "history.replaceState" in js
+
+
+def test_account_data_controls_exist(page):
+    js = _script(page)
+    assert 'id="expData"' in page and 'id="delAcct"' in page
+    assert "/api/account/export" in js and "/api/account/delete" in js
+
+
+def test_library_management_is_reachable(page):
+    js = _script(page)
+    assert "async function libraryList(" in js
+    assert 'id="quotaFill"' in page and 'id="libThumbs"' in page
+    assert "/api/library/'+b.dataset.rm" in js, "individual images must be removable"
+
+
+def test_server_path_controls_are_hidden_unless_allowed(page):
+    """A control that always answers 403 is worse than no control."""
+    js = _script(page)
+    assert "server_paths_allowed" in js
+    assert "libLocalSect').hidden" in js and "refPathRow').hidden" in js
+
+
+def test_privacy_is_stated_where_photos_are_uploaded(page):
+    assert "private to your account" in page or "visible only to you" in page
+    assert "Consent" in page, "uploading photos of other people needs saying out loud"

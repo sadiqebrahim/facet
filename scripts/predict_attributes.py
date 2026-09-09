@@ -60,9 +60,10 @@ def _slug(s):
     return re.sub(r"[^A-Za-z0-9._-]+", "_", s)
 
 
-def run_beauty(index: Index, store, head_path: Path, batch: int = 4096) -> dict:
+def run_beauty(index: Index, store, head_path: Path, batch: int = 4096,
+               owner: str | None = None) -> dict:
     head = BeautyHead.load(head_path)
-    faces = index.faces_missing_prediction("beauty", head.version)
+    faces = index.faces_missing_prediction("beauty", head.version, owner=owner)
     print(f"beauty: {len(faces)} faces need prediction (version {head.version})")
     if not faces:
         return {"n": 0}
@@ -97,7 +98,8 @@ def run_beauty(index: Index, store, head_path: Path, batch: int = 4096) -> dict:
     return {"n": len(faces), "seconds": el, "ood": n_ood}
 
 
-def run_age(index: Index, min_quality: float, limit: int, batch: int = 32) -> dict:
+def run_age(index: Index, min_quality: float, limit: int, batch: int = 32,
+            owner: str | None = None) -> dict:
     """Lazy MiVOLO pass. E4: wide crop, and only on faces worth the compute."""
     import cv2
 
@@ -106,7 +108,7 @@ def run_age(index: Index, min_quality: float, limit: int, batch: int = 32) -> di
 
     m = MiVOLOPredictor()
     version = m.version
-    faces = index.faces_missing_prediction("age", version)
+    faces = index.faces_missing_prediction("age", version, owner=owner)
     faces = [f for f in faces if (f["quality"] or 0) >= min_quality]
     if limit:
         faces = sorted(faces, key=lambda f: -(f["quality"] or 0))[:limit]
@@ -153,15 +155,30 @@ def run_age(index: Index, min_quality: float, limit: int, batch: int = 32) -> di
     return {"n": len(faces), "seconds": el}
 
 
-def run_dupes(index: Index, store, threshold: float) -> dict:
+def run_dupes(index: Index, store, threshold: float, owner: str | None = None) -> dict:
+    """Group duplicate and near-duplicate faces.
+
+    Scoped to one owner when given. Grouping across libraries would be both wasted work
+    (the pairwise pass is the expensive part) and slightly wrong: "you already have this
+    photo" is a statement about *your* library, not about the server's.
+    """
+    ow, oa = ("", []) if owner is None else (" AND i.owner=?", [owner])
     rows = list(index.conn.execute(
-        "SELECT id, feature_row FROM faces WHERE feature_row IS NOT NULL ORDER BY id"))
+        "SELECT f.id, f.feature_row FROM faces f JOIN images i ON i.id=f.image_id "
+        f"WHERE f.feature_row IS NOT NULL{ow} ORDER BY f.id", oa))
     exact = list(index.conn.execute(
-        "SELECT content_hash, GROUP_CONCAT(id) ids, COUNT(*) n FROM images "
-        "WHERE content_hash IS NOT NULL GROUP BY content_hash HAVING n > 1"))
+        "SELECT content_hash, GROUP_CONCAT(id) ids, COUNT(*) n FROM images i "
+        f"WHERE content_hash IS NOT NULL{ow} GROUP BY content_hash HAVING n > 1", oa))
+    base = index.conn.execute(
+        "SELECT COALESCE(MAX(group_id),0) FROM duplicates").fetchone()[0] + 1
     with index.tx():
-        index.conn.execute("DELETE FROM duplicates")
-        for gid, r in enumerate(exact):
+        if owner is None:
+            index.conn.execute("DELETE FROM duplicates")
+        else:
+            index.conn.execute(
+                "DELETE FROM duplicates WHERE face_id IN (SELECT f.id FROM faces f "
+                "JOIN images i ON i.id=f.image_id WHERE i.owner=?)", (owner,))
+        for gid, r in enumerate(exact, start=base):
             for image_id in r["ids"].split(","):
                 for f in index.conn.execute("SELECT id FROM faces WHERE image_id=?",
                                             (int(image_id),)):
@@ -173,11 +190,12 @@ def run_dupes(index: Index, store, threshold: float) -> dict:
             labels = near_duplicate_groups(X, threshold=threshold)
             _, counts = np.unique(labels, return_counts=True)
             multi = {int(l) for l, c in zip(*np.unique(labels, return_counts=True)) if c > 1}
+            near_base = base + len(exact)
             for r, lab in zip(rows, labels):
                 if int(lab) in multi:
                     index.conn.execute(
                         "INSERT OR REPLACE INTO duplicates(face_id,group_id,kind) "
-                        "VALUES(?,?,'near')", (r["id"], int(lab)))
+                        "VALUES(?,?,'near')", (r["id"], near_base + int(lab)))
     n_near = index.conn.execute(
         "SELECT COUNT(DISTINCT group_id) FROM duplicates WHERE kind='near'").fetchone()[0]
     print(f"duplicates: {len(exact)} exact-file groups, {n_near} near-duplicate face groups "

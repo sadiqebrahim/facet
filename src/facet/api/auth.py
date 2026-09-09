@@ -58,8 +58,17 @@ CREATE TABLE IF NOT EXISTS users (
     -- a reset link to, so "forgot password" means asking that person - which only works if
     -- the UI can tell you who they are.
     is_admin      INTEGER NOT NULL DEFAULT 0,
-    must_change   INTEGER NOT NULL DEFAULT 0
+    must_change   INTEGER NOT NULL DEFAULT 0,
+    -- password | google. A federated account has no usable password hash, so the password
+    -- path must refuse it outright rather than fail a comparison against an empty string.
+    provider      TEXT NOT NULL DEFAULT 'password',
+    provider_sub  TEXT,
+    email         TEXT,
+    avatar_url    TEXT,
+    last_seen     REAL
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_provider
+    ON users(provider, provider_sub) WHERE provider_sub IS NOT NULL;
 CREATE TABLE IF NOT EXISTS sessions (
     token      TEXT PRIMARY KEY,
     username   TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE,
@@ -82,7 +91,12 @@ class Accounts:
     def _migrate(self) -> None:
         cols = {r[1] for r in self.conn.execute("PRAGMA table_info(users)")}
         for col, ddl in (("is_admin", "INTEGER NOT NULL DEFAULT 0"),
-                         ("must_change", "INTEGER NOT NULL DEFAULT 0")):
+                         ("must_change", "INTEGER NOT NULL DEFAULT 0"),
+                         ("provider", "TEXT NOT NULL DEFAULT 'password'"),
+                         ("provider_sub", "TEXT"),
+                         ("email", "TEXT"),
+                         ("avatar_url", "TEXT"),
+                         ("last_seen", "REAL")):
             if col not in cols:
                 self.conn.execute(f"ALTER TABLE users ADD COLUMN {col} {ddl}")
         # An index created before roles existed has no admin; promote the earliest account
@@ -153,17 +167,84 @@ class Accounts:
 
     def details(self) -> list[dict]:
         return [dict(r) for r in self.conn.execute(
-            "SELECT username, display_name, created_at, is_admin, must_change "
-            "FROM users ORDER BY is_admin DESC, username")]
+            "SELECT username, display_name, created_at, is_admin, must_change, "
+            "provider, email, last_seen FROM users ORDER BY is_admin DESC, username")]
 
     def check(self, username: str, password: str) -> bool:
-        r = self.conn.execute("SELECT password_hash, salt FROM users WHERE username=?",
-                              (username,)).fetchone()
-        if r is None:
-            # Hash anyway so a missing user and a wrong password take the same time.
+        r = self.conn.execute(
+            "SELECT password_hash, salt, provider FROM users WHERE username=?",
+            (username,)).fetchone()
+        if r is None or not r["password_hash"] or r["provider"] != "password":
+            # Hash anyway so a missing user, a federated user and a wrong password all take
+            # the same time - otherwise the response time enumerates accounts.
             hash_password(password)
             return False
         return verify_password(password, r["password_hash"], r["salt"])
+
+    # ------------------------------------------------------- federated identity
+
+    def find_by_provider(self, provider: str, sub: str) -> str | None:
+        r = self.conn.execute(
+            "SELECT username FROM users WHERE provider=? AND provider_sub=?",
+            (provider, sub)).fetchone()
+        return r["username"] if r else None
+
+    def find_by_email(self, email: str) -> str | None:
+        if not email:
+            return None
+        r = self.conn.execute("SELECT username FROM users WHERE lower(email)=lower(?)",
+                              (email,)).fetchone()
+        return r["username"] if r else None
+
+    def upsert_federated(self, provider: str, sub: str, email: str,
+                         display_name: str | None = None,
+                         avatar_url: str | None = None) -> tuple[str, bool]:
+        """Find or create the account behind a verified provider identity.
+
+        Matching is on `(provider, sub)` - the provider's own immutable id - and never on
+        the email address alone. Emails get reassigned and can be changed at the provider;
+        treating one as a key is how federated logins end up handing a stranger somebody
+        else's account. An existing *password* account with the same address is linked only
+        because that address arrived verified from the provider.
+        """
+        existing = self.find_by_provider(provider, sub)
+        if existing:
+            self.conn.execute(
+                "UPDATE users SET email=?, avatar_url=?, last_seen=? WHERE username=?",
+                (email, avatar_url, time.time(), existing))
+            self.conn.commit()
+            return existing, False
+
+        linked = self.find_by_email(email)
+        if linked:
+            self.conn.execute(
+                "UPDATE users SET provider=?, provider_sub=?, avatar_url=?, last_seen=? "
+                "WHERE username=?", (provider, sub, avatar_url, time.time(), linked))
+            self.conn.commit()
+            return linked, False
+
+        username = self.available_username(email.split("@")[0] if email else "user")
+        admin = self.count() == 0
+        self.conn.execute(
+            "INSERT INTO users(username,password_hash,salt,display_name,created_at,"
+            "is_admin,provider,provider_sub,email,avatar_url,last_seen) "
+            "VALUES(?,'','',?,?,?,?,?,?,?,?)",
+            (username, display_name or email or username, time.time(), int(admin),
+             provider, sub, email, avatar_url, time.time()))
+        self.conn.commit()
+        return username, True
+
+    def available_username(self, seed: str) -> str:
+        base = re.sub(r"[^a-zA-Z0-9._-]", "", (seed or "user"))[:24].strip("._-") or "user"
+        if len(base) < 2:
+            base = f"{base}user"[:24]
+        if not self.exists(base):
+            return base
+        for i in range(2, 1000):
+            cand = f"{base[:26]}{i}"
+            if not self.exists(cand):
+                return cand
+        return f"{base[:20]}{secrets.token_hex(4)}"
 
     def start_session(self, username: str) -> str:
         tok = new_token()
@@ -190,9 +271,14 @@ class Accounts:
 
     def info(self, username: str) -> dict:
         r = self.conn.execute(
-            "SELECT username, display_name, created_at FROM users WHERE username=?",
-            (username,)).fetchone()
+            "SELECT username, display_name, created_at, provider, email, avatar_url "
+            "FROM users WHERE username=?", (username,)).fetchone()
         return dict(r) if r else {}
+
+    def touch(self, username: str) -> None:
+        self.conn.execute("UPDATE users SET last_seen=? WHERE username=?",
+                          (time.time(), username))
+        self.conn.commit()
 
     def list_users(self) -> list[str]:
         return [r["username"] for r in
