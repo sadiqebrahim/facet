@@ -47,7 +47,11 @@ def valid_username(name: str) -> bool:
     return bool(USERNAME_RE.match(name or ""))
 
 
-SCHEMA = """
+# Split deliberately. `CREATE TABLE IF NOT EXISTS` is a no-op against a table that already
+# exists, so on an upgrade the new columns are absent when the index that references them is
+# created - which fails with "no such column: provider" and takes every auth route with it.
+# Tables first, then _migrate() adds the columns, then the indexes.
+SCHEMA_TABLES = """
 CREATE TABLE IF NOT EXISTS users (
     username      TEXT PRIMARY KEY,
     password_hash TEXT NOT NULL,
@@ -67,14 +71,17 @@ CREATE TABLE IF NOT EXISTS users (
     avatar_url    TEXT,
     last_seen     REAL
 );
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_provider
-    ON users(provider, provider_sub) WHERE provider_sub IS NOT NULL;
 CREATE TABLE IF NOT EXISTS sessions (
     token      TEXT PRIMARY KEY,
     username   TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE,
     created_at REAL,
     expires_at REAL
 );
+"""
+
+SCHEMA_INDEXES = """
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_provider
+    ON users(provider, provider_sub) WHERE provider_sub IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(username);
 """
 
@@ -84,8 +91,9 @@ class Accounts:
 
     def __init__(self, conn):
         self.conn = conn
-        self.conn.executescript(SCHEMA)
-        self._migrate()
+        self.conn.executescript(SCHEMA_TABLES)
+        self._migrate()                       # must precede the indexes - see SCHEMA_TABLES
+        self.conn.executescript(SCHEMA_INDEXES)
         self.conn.commit()
 
     def _migrate(self) -> None:

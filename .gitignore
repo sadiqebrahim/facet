@@ -43,3 +43,6 @@ __pycache__/
 /facet.db.*.bak
 /feats/
 *.bak
+
+# Local recovery copies of the index. Same rule as facet.db: never committed.
+/.recovery/

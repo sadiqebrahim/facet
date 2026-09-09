@@ -186,3 +186,68 @@ def test_a_verified_email_links_an_existing_password_account(tmp_path):
         assert acc.count() == 1
     finally:
         ix.close()
+
+
+# --------------------------------------------------- upgrading a pre-OAuth accounts table
+
+def _old_users_table(path):
+    """The users table exactly as it existed before Google sign-in was added."""
+    import sqlite3
+    c = sqlite3.connect(path)
+    c.row_factory = sqlite3.Row
+    c.executescript("""
+        CREATE TABLE users (
+            username      TEXT PRIMARY KEY,
+            password_hash TEXT NOT NULL,
+            salt          TEXT NOT NULL,
+            display_name  TEXT,
+            created_at    REAL,
+            is_admin      INTEGER NOT NULL DEFAULT 0,
+            must_change   INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE TABLE sessions (
+            token TEXT PRIMARY KEY, username TEXT NOT NULL,
+            created_at REAL, expires_at REAL
+        );
+    """)
+    c.execute("INSERT INTO users(username,password_hash,salt,created_at,is_admin) "
+              "VALUES('sadiq','deadbeef','cafe',1000.0,1)")
+    c.execute("INSERT INTO users(username,password_hash,salt,created_at,is_admin) "
+              "VALUES('friend','f00d','beef',2000.0,0)")
+    c.commit()
+    return c
+
+
+def test_accounts_opens_over_a_pre_oauth_users_table(tmp_path):
+    """The upgrade path a returning user actually hits.
+
+    `CREATE TABLE IF NOT EXISTS` does nothing to a table that already exists, so the columns
+    the provider index references were still missing when the index was created. It raised
+    `no such column: provider` inside Accounts.__init__ - which every auth route calls, so
+    the whole app 500'd and the sign-in page never rendered.
+    """
+    from facet.api.auth import Accounts
+
+    db = tmp_path / "old.db"
+    conn = _old_users_table(db)
+
+    acc = Accounts(conn)                       # used to raise OperationalError
+
+    assert acc.count() == 2
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(users)")}
+    assert {"provider", "provider_sub", "email", "avatar_url", "last_seen"} <= cols
+    assert [r["name"] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_users_provider'")]
+    # Existing rows must come out as password accounts, not federated ones.
+    assert conn.execute(
+        "SELECT provider FROM users WHERE username='sadiq'").fetchone()["provider"] == "password"
+    assert acc.admins() == ["sadiq"]
+
+
+def test_accounts_migration_is_idempotent(tmp_path):
+    from facet.api.auth import Accounts
+    db = tmp_path / "old.db"
+    conn = _old_users_table(db)
+    Accounts(conn)
+    Accounts(conn)                             # second open must not raise or duplicate
+    assert Accounts(conn).count() == 2
